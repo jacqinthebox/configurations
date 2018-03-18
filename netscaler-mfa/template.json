@@ -1,0 +1,260 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "containerSasToken": {
+            "type": "string"
+        },
+        "testVar": {
+            "type": "string"
+        },
+        "netscalerName": {
+            "type": "string"
+        },
+        "adminUserName": {
+            "type": "string",
+            "defaultValue": "nsroot"
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "defaultValue": "123Pollie!"
+        }
+    },
+    "variables": {
+        "storageAccountGeneratedName": "[concat('disk', uniqueString(resourceGroup().id))]",
+        "virtualNetworkName": "vnet",
+        "virtualNetworkAddressRange": "10.10.0.0/16",
+        "subnetName": "subnet1",
+        "subnet": "10.10.1.0/24",
+        "netscalerNetworkInterfaceName": "[concat(parameters('netscalerName'),'-nic')]",
+        "networkSecurityGroupName": "nsg",
+        "nestedTemplates": {
+            "storageTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/storage.json')]",
+            "vnetTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/vnet.json')]"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-05-10",
+            "name": "storageDeployment",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('nestedTemplates').storageTemplateUrl, parameters('containerSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                }
+            }
+        },
+        {
+            "apiVersion": "2016-09-01",
+            "name": "vnetDeployment",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('nestedTemplates').vnetTemplateUrl, parameters('containerSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "virtualNetworkName": {
+                        "value": "[variables('virtualNetworkName')]"
+                    },
+                    "virtualNetworkAddressRange": {
+                        "value": "[variables('virtualNetworkAddressRange')]"
+                    },
+                    "subnetName": {
+                        "value": "[variables('subnetName')]"
+                    },
+                    "subnetRange": {
+                        "value": "[variables('subnet')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "[concat(parameters('netscalerName'), '-vip')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2017-10-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIpAllocationMethod": "Dynamic"
+            },
+            "sku": {
+                "name": "Basic"
+            }
+        },
+        {
+            "name": "[concat(parameters('netscalerName'), '-nsip')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2017-10-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIpAllocationMethod": "Dynamic"
+            },
+            "sku": {
+                "name": "Basic"
+            }
+        },
+        {
+            "name": "[variables('networkSecurityGroupName')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2017-10-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "ssh-rule",
+                        "properties": {
+                            "description": "Allow remote SSH",
+                            "priority": 1000,
+                            "protocol": "Tcp",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourceAddressPrefix": "Internet",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "22"
+                        }
+                    },
+                    {
+                        "name": "web-rule",
+                        "properties": {
+                            "description": "Allow Secure WEB",
+                            "priority": 1001,
+                            "protocol": "Tcp",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourceAddressPrefix": "Internet",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "443"
+                        }
+                    },
+                    {
+                        "name": "rdp-rule",
+                        "properties": {
+                            "description": "Allow rdp",
+                            "priority": 1002,
+                            "protocol": "Tcp",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourceAddressPrefix": "Internet",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "3389"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('netscalerNetworkInterfaceName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2017-10-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('netscalerName'), '-nsip'))]",
+                "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('netscalerName'), '-nsip'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "nsip",
+                        "properties": {
+                            "primary": true,
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('netscalerName'), '-nsip'))]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "vip",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('netscalerName'), '-vip'))]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "snip",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic"
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                }
+            }
+        },
+        {
+            "name": "[parameters('netscalerName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2017-03-30",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('netscalerNetworkInterfaceName'))]",
+                "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('netscalerName'), '-nsip'))]",
+                "Microsoft.Resources/deployments/storageDeployment"
+            ],
+            "plan": {
+                "name": "netscalervpxexpress",
+                "publisher": "citrix",
+                "product": "netscalervpx-120"
+            },
+            "properties": {
+                "osProfile": {
+                    "computerName": "[parameters('netscalerName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "customData": "[base64(concat('config=express;username=', parameters('adminUsername') ))]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "Standard_A2"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "citrix",
+                        "offer": "netscalervpx-120",
+                        "sku": "netscalervpxexpress",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "netscaler01-Osdisk",
+                        "createOption": "FromImage",
+                        "vhd": {
+                            "uri": "[concat('http://', variables('storageAccountGeneratedName'), '.blob.core.windows.net/vhds/netscalerOsDisk.vhd')]"
+                        }
+                    },
+                    "dataDisks": []
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('netscalerNetworkInterfaceName'))]"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "testVar": {
+            "type": "string",
+            "value": "[parameters('testVar')]"
+        }
+    }
+}
