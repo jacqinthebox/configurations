@@ -130,11 +130,10 @@ Function New-AzureDeployment {
     $a = Get-Content $absoluteParametersPath -raw | ConvertFrom-Json 
     $sasTokenValue = $a | Select-Object -expand parameters | Select-Object -expand containerSasToken 
     $sasTokenValue.value = $token
-    $a | ConvertTo-Json  | set-content $ParametersFilePath
+    $a | ConvertTo-Json  | set-content $absoluteParametersPath
 
     Write-Verbose "Starting deployment..."
-    Write-Verbose "New-AzureRmResourceGroupDeployment -Name $deploymentName -ResourceGroupName $resourceGroupName -TemplateUri ($url + $token) <#-ContainerSasToken $token#>  -TemplateParameterFile $ParametersFilePath"
-    New-AzureRmResourceGroupDeployment -Name $deploymentName -ResourceGroupName $resourceGroupName -TemplateUri ($url + $token) <#-ContainerSasToken $token#>  -TemplateParameterFile $ParametersFilePath
+    New-AzureRmResourceGroupDeployment -Name $deploymentName -ResourceGroupName $resourceGroupName -TemplateUri ($url + $token) -TemplateParameterFile $absoluteParametersPath
     
 }
 

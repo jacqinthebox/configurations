@@ -21,7 +21,6 @@
         }
     },
     "variables": {
-        "storageAccountGeneratedName": "[concat('disk', uniqueString(resourceGroup().id))]",
         "virtualNetworkName": "vnet",
         "virtualNetworkAddressRange": "10.10.0.0/16",
         "subnetName": "subnet1",
@@ -30,7 +29,8 @@
         "networkSecurityGroupName": "nsg",
         "nestedTemplates": {
             "storageTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/storage.json')]",
-            "vnetTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/vnet.json')]"
+            "vnetTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/vnet.json')]",
+            "netscalerTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/netscaler.json')]"
         }
     },
     "resources": [
@@ -201,54 +201,35 @@
             }
         },
         {
-            "name": "[parameters('netscalerName')]",
-            "type": "Microsoft.Compute/virtualMachines",
-            "apiVersion": "2017-03-30",
-            "location": "[resourceGroup().location]",
+            "apiVersion": "2017-05-10",
+            "name": "netscalerVmDeployment",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('nestedTemplates').netscalerTemplateUrl, parameters('containerSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "adminUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "adminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "netscalerNetworkInterfaceName": {
+                        "value": "[variables('netscalerNetworkInterfaceName')]"
+                    },
+                    "netscalerName": {
+                        "value": "[parameters('netscalerName')]"
+                    }
+                }
+            },
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkInterfaces', variables('netscalerNetworkInterfaceName'))]",
                 "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('netscalerName'), '-nsip'))]",
                 "Microsoft.Resources/deployments/storageDeployment"
-            ],
-            "plan": {
-                "name": "netscalervpxexpress",
-                "publisher": "citrix",
-                "product": "netscalervpx-120"
-            },
-            "properties": {
-                "osProfile": {
-                    "computerName": "[parameters('netscalerName')]",
-                    "adminUsername": "[parameters('adminUsername')]",
-                    "adminPassword": "[parameters('adminPassword')]",
-                    "customData": "[base64(concat('config=express;username=', parameters('adminUsername') ))]"
-                },
-                "hardwareProfile": {
-                    "vmSize": "Standard_A2"
-                },
-                "storageProfile": {
-                    "imageReference": {
-                        "publisher": "citrix",
-                        "offer": "netscalervpx-120",
-                        "sku": "netscalervpxexpress",
-                        "version": "latest"
-                    },
-                    "osDisk": {
-                        "name": "netscaler01-Osdisk",
-                        "createOption": "FromImage",
-                        "vhd": {
-                            "uri": "[concat('http://', variables('storageAccountGeneratedName'), '.blob.core.windows.net/vhds/netscalerOsDisk.vhd')]"
-                        }
-                    },
-                    "dataDisks": []
-                },
-                "networkProfile": {
-                    "networkInterfaces": [
-                        {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('netscalerNetworkInterfaceName'))]"
-                        }
-                    ]
-                }
-            }
+            ]
         }
     ],
     "outputs": {
