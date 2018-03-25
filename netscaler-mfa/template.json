@@ -464,6 +464,40 @@
                     ]
                 }
             }
+        },
+        {
+            "name": "UpdateVNetDNSDeployment",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('DCName'),'/extensions/CreateADForest')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat (variables('nestedTemplates').vnetUpdateDnsTemplateUrl, parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "virtualNetworkName": {
+                        "value": "[variables('virtualNetworkName')]"
+                    },
+                    "dnsServers": {
+                        "value": [
+                            "[variables('DCNicIPAddress')]"
+                        ]
+                    },
+                    "subnetName": {
+                        "value": "[variables('subnetName')]"
+                    },
+                    "virtualNetworkAddressRange": {
+                        "value": "[variables('virtualNetworkAddressRange')]"
+                    },
+                    "subnetRange": {
+                        "value": "[variables('subnet')]"
+                    }
+                }
+            }
         }
     ],
     "outputs": {
