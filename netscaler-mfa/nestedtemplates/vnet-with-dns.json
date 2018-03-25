@@ -5,12 +5,9 @@
         "virtualNetworkName": {
             "type": "string"
         },
-        "virtualNetworkAddressRange": {
-            "type": "string",
-            "metadata": {
-                "Description": "The address range of the new VNET in CIDR format"
-            },
-            "defaultValue": "10.10.0.0/16"
+        "dnsServers": {
+            "type": "array",
+            "defaultValue": []
         },
         "subnetName": {
             "type": "string",
@@ -18,12 +15,19 @@
                 "Description": "The name of the subnet created in the new VNET"
             }
         },
+        "virtualNetworkAddressRange": {
+            "type": "string",
+            "metadata": {
+                "Description": "The address range of the new VNET in CIDR format"
+            },
+            "defaultValue": "10.10.0.0/16"
+        },
         "subnetRange": {
             "type": "string",
-            "defaultValue": "10.10.1.0/24"
-        },
-        "dnsServerAddress": {
-            "type": "string"
+            "metadata": {
+                "Description": "The address range of the subnet created in the new VNET"
+            },
+            "defaultValue": "10.0.0.0/24"
         }
     },
     "resources": [
@@ -38,9 +42,6 @@
                         "[parameters('virtualNetworkAddressRange')]"
                     ]
                 },
-                "dhcpOptions": {
-                    "dnsServers": "[parameters('dnsServerAddress')]"
-                },
                 "subnets": [
                     {
                         "name": "[parameters('subnetName')]",
@@ -48,7 +49,10 @@
                             "addressPrefix": "[parameters('subnetRange')]"
                         }
                     }
-                ]
+                ],
+                "dhcpOptions": {
+                    "dnsServers": "[parameters('dnsServers')]"
+                }
             }
         }
     ]
