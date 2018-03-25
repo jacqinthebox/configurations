@@ -2,13 +2,16 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "containerSasToken": {
+        "_artifactsLocationSasToken": {
             "type": "string"
         },
         "testVar": {
             "type": "string"
         },
         "netscalerName": {
+            "type": "string"
+        },
+        "domainName": {
             "type": "string"
         },
         "adminUserName": {
@@ -18,6 +21,10 @@
         "adminPassword": {
             "type": "securestring",
             "defaultValue": "123Pollie!"
+        },
+        "members": {
+            "type": "int",
+            "defaultValue": 2
         }
     },
     "variables": {
@@ -27,33 +34,45 @@
         "subnet": "10.10.1.0/24",
         "netscalerNetworkInterfaceName": "[concat(parameters('netscalerName'),'-nic')]",
         "networkSecurityGroupName": "nsg",
+        "DCName": "dc01",
+        "vmSize": "Standard_B2ms",
+        "imagePublisher": "MicrosoftWindowsServer",
+        "imageOffer": "WindowsServer",
+        "imageSKU": "2016-Datacenter",
+        "DcConfigurationScript": "CreateDc.ps1",
+        "DcConfigurationFunction": "CreateDc",
+        "dcNicIPAddress": "10.10.1.100",
         "nestedTemplates": {
             "storageTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/storage.json')]",
             "vnetTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/vnet.json')]",
-            "netscalerTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/netscaler.json')]"
+            "netscalerTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/netscaler.json')]",
+            "vnetUpdateDnsTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/vnet-with-dns.json')]",
+            "nicUpdateTemplate": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/nic-update.json')]"
         }
     },
     "resources": [
         {
-            "apiVersion": "2017-05-10",
             "name": "storageDeployment",
             "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2017-05-10",
+            "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(variables('nestedTemplates').storageTemplateUrl, parameters('containerSasToken'))]",
+                    "uri": "[concat(variables('nestedTemplates').storageTemplateUrl, parameters('_artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 }
             }
         },
         {
-            "apiVersion": "2016-09-01",
             "name": "vnetDeployment",
             "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(variables('nestedTemplates').vnetTemplateUrl, parameters('containerSasToken'))]",
+                    "uri": "[concat(variables('nestedTemplates').vnetTemplateUrl, parameters('_artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -76,6 +95,7 @@
             "name": "[concat(parameters('netscalerName'), '-vip')]",
             "type": "Microsoft.Network/publicIPAddresses",
             "apiVersion": "2017-10-01",
+            "dependsOn": [],
             "location": "[resourceGroup().location]",
             "properties": {
                 "publicIpAllocationMethod": "Dynamic"
@@ -88,6 +108,7 @@
             "name": "[concat(parameters('netscalerName'), '-nsip')]",
             "type": "Microsoft.Network/publicIPAddresses",
             "apiVersion": "2017-10-01",
+            "dependsOn": [],
             "location": "[resourceGroup().location]",
             "properties": {
                 "publicIpAllocationMethod": "Dynamic"
@@ -100,6 +121,7 @@
             "name": "[variables('networkSecurityGroupName')]",
             "type": "Microsoft.Network/networkSecurityGroups",
             "apiVersion": "2017-10-01",
+            "dependsOn": [],
             "location": "[resourceGroup().location]",
             "properties": {
                 "securityRules": [
@@ -155,7 +177,7 @@
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('netscalerName'), '-nsip'))]",
-                "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('netscalerName'), '-nsip'))]",
+                "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('netscalerName'), '-vip'))]",
                 "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
             ],
             "properties": {
@@ -201,13 +223,18 @@
             }
         },
         {
-            "apiVersion": "2017-05-10",
             "name": "netscalerVmDeployment",
             "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2017-05-10",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('netscalerNetworkInterfaceName'))]",
+                "Microsoft.Resources/deployments/storageDeployment",
+                "Microsoft.Resources/deployments/vnetDeployment"
+            ],
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(variables('nestedTemplates').netscalerTemplateUrl, parameters('containerSasToken'))]",
+                    "uri": "[concat(variables('nestedTemplates').netscalerTemplateUrl, parameters('_artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -224,12 +251,219 @@
                         "value": "[parameters('netscalerName')]"
                     }
                 }
+            }
+        },
+        {
+            "name": "[concat(variables('dcName'), '-pip')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2017-10-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIpAllocationMethod": "Dynamic"
+            },
+            "sku": {
+                "name": "Basic"
+            }
+        },
+        {
+            "name": "[concat(variables('dcName'), '-nic')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2017-10-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIpAddresses', concat(variables('dcName'), '-pip'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "dcpipconfig",
+                        "properties": {
+                            "primary": true,
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
+                            },
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[variables('dcNicIPAddress')]",
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIpAddresses', concat(variables('dcName'), '-pip'))]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                }
+            }
+        },
+        {
+            "name": "[variables('DCName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2017-03-30",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/storageDeployment",
+                "[resourceId('Microsoft.Network/networkInterfaces',concat(variables('dcName'), '-nic'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('DCName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('imagePublisher')]",
+                        "offer": "[variables('imageOffer')]",
+                        "sku": "[variables('imageSKU')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "osdisk",
+                        "vhd": {
+                            "uri": "[concat('http://', concat('disk', uniqueString(resourceGroup().id)), '.blob.core.windows.net/vhds/dcOsDisk2.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(variables('DcName'),'-nic'))]"
+                        }
+                    ]
+                }
+            },
+            "resources": [
+                {
+                    "name": "CreateADForest",
+                    "type": "extensions",
+                    "apiVersion": "2017-03-30",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', variables('DCName'))]"
+                    ],
+                    "location": "[resourceGroup().location]",
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.75",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "wmfVersion": "latest",
+                            "configuration": {
+                                "url": "[concat('https://msdnmctartifacts.blob.core.windows.net/templates/DSC/CreateDc.zip', parameters('_artifactsLocationSasToken'))]",
+                                "script": "[variables('DCConfigurationScript')]",
+                                "function": "[variables('DCConfigurationFunction')]"
+                            },
+                            "configurationArguments": {
+                                "DomainName": "[parameters('domainName')]"
+                            }
+                        },
+                        "protectedSettings": {
+                            "configurationArguments": {
+                                "AdminCredentials": {
+                                    "UserName": "[parameters('adminUserName')]",
+                                    "Password": "[parameters('adminPassword')]"
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "apiVersion": "2015-05-01-preview",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[concat('member0',copyIndex(1), '-pip')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic"
+            },
+            "copy": {
+                "name": "publicIpCopy",
+                "count": "[parameters('members')]"
+            }
+        },
+        {
+            "apiVersion": "2015-05-01-preview",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[concat('member0',copyIndex(1),'-nic')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIPAddresses/', concat('member0',copyIndex(1),'-pip'))]",
+                "Microsoft.Resources/deployments/vnetDeployment"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "[concat('ipconfig', copyIndex(1))]",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',concat('member0',copyIndex(1),'-pip'))]"
+                            },
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
+                            }
+                        }
+                    }
+                ]
+            },
+            "copy": {
+                "name": "nicCopy",
+                "count": "[parameters('members')]"
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2017-03-30",
+            "copy": {
+                "name": "nodeCopy",
+                "count": "[parameters('members')]"
             },
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces', variables('netscalerNetworkInterfaceName'))]",
-                "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('netscalerName'), '-nsip'))]",
-                "Microsoft.Resources/deployments/storageDeployment"
-            ]
+                "Microsoft.Resources/deployments/storageDeployment",
+                "[concat('Microsoft.Network/networkInterfaces/','member0',copyIndex(1),'-nic')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat('member0',copyIndex(1))]",
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('vmSize')]"
+                },
+                "osProfile": {
+                    "computername": "[concat('member0',copyIndex(1))]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('imagePublisher')]",
+                        "offer": "[variables('imageOffer')]",
+                        "sku": "[variables('imageSKU')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "osdisk",
+                        "vhd": {
+                            "uri": "[concat('http://disk', uniqueString(resourceGroup().id), '.blob.core.windows.net/vhds/member0', copyIndex(1), '-OsDisk.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat('member0',copyIndex(1),'-nic'))]"
+                        }
+                    ]
+                }
+            }
         }
     ],
     "outputs": {

@@ -20,10 +20,10 @@
         },
         "subnetRange": {
             "type": "string",
-            "metadata": {
-                "Description": "The address range of the subnet created in the new VNET"
-            },
             "defaultValue": "10.10.1.0/24"
+        },
+        "dnsServerAddress": {
+            "type": "string"
         }
     },
     "resources": [
@@ -37,6 +37,9 @@
                     "addressPrefixes": [
                         "[parameters('virtualNetworkAddressRange')]"
                     ]
+                },
+                "dhcpOptions": {
+                    "dnsServers": "[parameters('dnsServerAddress')]"
                 },
                 "subnets": [
                     {
