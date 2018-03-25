@@ -3,10 +3,7 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "virtualNetworkName": {
-            "type": "string",
-            "metadata": {
-                "Description": "The name of the Virtual Network to Create"
-            }
+            "type": "string"
         },
         "virtualNetworkAddressRange": {
             "type": "string",
