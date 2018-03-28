@@ -35,19 +35,20 @@
         "netscalerNetworkInterfaceName": "[concat(parameters('netscalerName'),'-nic')]",
         "networkSecurityGroupName": "nsg",
         "DCName": "dc01",
-        "vmSize": "Standard_B2ms",
+        "vmSize": "Standard_A2",
         "imagePublisher": "MicrosoftWindowsServer",
         "imageOffer": "WindowsServer",
         "imageSKU": "2016-Datacenter",
         "DcConfigurationScript": "CreateDc.ps1",
         "DcConfigurationFunction": "CreateDc",
         "dcNicIPAddress": "10.10.1.100",
+        "memberIpPrefix": "10.10.1.8",
         "nestedTemplates": {
             "storageTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/storage.json')]",
             "vnetTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/vnet.json')]",
             "netscalerTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/netscaler.json')]",
             "vnetUpdateDnsTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/vnet-with-dns.json')]",
-            "nicUpdateTemplate": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/nic-update.json')]"
+            "nicUpdateTemplateUrl": "[uri(deployment().properties.templateLink.uri, 'nestedtemplates/nic.json')]"
         }
     },
     "resources": [
@@ -462,6 +463,111 @@
                             "id": "[resourceId('Microsoft.Network/networkInterfaces', concat('member0',copyIndex(1),'-nic'))]"
                         }
                     ]
+                }
+            }
+        },
+        {
+            "name": "UpdateVNetDNSDeployment",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('DCName'),'/extensions/CreateADForest')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat (variables('nestedTemplates').vnetUpdateDnsTemplateUrl, parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "virtualNetworkName": {
+                        "value": "[variables('virtualNetworkName')]"
+                    },
+                    "dnsServers": {
+                        "value": [
+                            "[variables('DCNicIPAddress')]"
+                        ]
+                    },
+                    "subnetName": {
+                        "value": "[variables('subnetName')]"
+                    },
+                    "virtualNetworkAddressRange": {
+                        "value": "[variables('virtualNetworkAddressRange')]"
+                    },
+                    "subnetRange": {
+                        "value": "[variables('subnet')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "[concat ('member0', copyIndex(1), 'nicupdateDeployment')]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/UpdateVNetDNSDeployment"
+            ],
+            "copy": {
+                "name": "nicUpdateCopy",
+                "count": "[parameters('members')]"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat (variables('nestedTemplates').nicUpdateTemplateUrl, parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "nicName": {
+                        "value": "[concat('member0',copyIndex(1),'-nic')]"
+                    },
+                    "ipConfigurations": {
+                        "value": [
+                            {
+                                "name": "[concat('ipconfig', copyIndex(1))]",
+                                "properties": {
+                                    "privateIPAllocationMethod": "Static",
+                                    "privateIPAddress": "[concat(variables('memberIpPrefix'),copyIndex(1))]",
+                                    "subnet": {
+                                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    "dnsServers": {
+                        "value": [
+                            "[variables('DCNicIPAddress')]"
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat('member0',copyIndex(1),'/joindomain')]",
+            "dependsOn": [
+                "[concat ('member0', copyIndex(1), 'nicupdateDeployment')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "vmDomainJoinCopy",
+                "count": "[parameters('members')]"
+            },
+            "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "JsonADDomainExtension",
+                "typeHandlerVersion": "1.3",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "Name": "[parameters('domainName')]",
+                    "User": "[concat(parameters('DomainName'), '\\', parameters('adminUserName'))]",
+                    "Restart": "true",
+                    "Options": "3"
+                },
+                "protectedSettings": {
+                    "Password": "[parameters('adminPassword')]"
                 }
             }
         }
