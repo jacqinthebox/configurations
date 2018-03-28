@@ -37,7 +37,7 @@ Function New-AzureDeployment {
         $ResourceGroupLocation = "west europe",
     
         [string]
-        $RegisterProviders = $False,
+        $RegisterProviders = $True,
 
         [string] 
         $DSCSourceFolder = 'DSC',
@@ -84,13 +84,13 @@ Function New-AzureDeployment {
         New-AzureRmResourceGroup -Name $deploymentResourceGroup -Location $ResourceGroupLocation
         New-AzureRmStorageAccount -ResourceGroupName $deploymentResourceGroup -Name $deploymentStorageAccountname -Type Standard_LRS -Location "westeurope"
         Set-AzureRmCurrentStorageAccount -ResourceGroupName $deploymentResourceGroup -Name $deploymentStorageAccountname 
+        $containers = Get-AzureStorageContainer | Where-Object { $_.Name -eq 'templates'} 
+        if ($containers -eq $null) {
+            New-AzureStorageContainer -Name templates -Permission Off
+        }
+   
     }
 
-    $containers = Get-AzureStorageContainer | Where-Object { $_.Name -eq 'templates'} 
-    if ($containers -eq $null) {
-        New-AzureStorageContainer -Name templates -Permission Off
-    }
-  
     # Register providers (if needed)
     if ($registerProviders -eq $True) {
         $resourceProviders = @("microsoft.compute", "microsoft.devtestlab", "microsoft.network", "microsoft.storage");
@@ -176,7 +176,6 @@ Function New-AzureDeployment {
     # Now everything is in place to start the deployment of the ARM template
     Write-Verbose "Starting deployment..."
     New-AzureRmResourceGroupDeployment -Name $deploymentName -ResourceGroupName $resourceGroupName -TemplateUri ($url + $token) @OptionalParameters
-    
 }
 
 $vars = @{
