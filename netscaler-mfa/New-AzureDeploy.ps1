@@ -1,3 +1,25 @@
+<# 
+TODO:Write better help
+Example usage:
+
+$vars = @{
+    ClientId                        = ""
+    Secret                          = ""
+    TenantId                        = ""
+    SubscriptionId                  = ""
+    ResourceGroupName               = "netscaler-mfa-poc"
+    ArtifactsResourceGroup          = 'msdn-mct-deployments' 
+    ArtifactsLocationStorageAccount = 'msdnmctartifacts'
+}
+
+New-AzureDeployment @vars -Verbose
+
+# For troubleshooting
+# (Get-AzureRmLog -Status "Failed"  | Select-Object -First 1) | Format-List
+
+#>
+
+
 Function New-AzureDeployment {
 
     [CmdletBinding()]
@@ -27,11 +49,11 @@ Function New-AzureDeployment {
 
         [Parameter(Mandatory = $True)]
         [string]
-        $DeploymentResourceGroup, 
+        $ArtifactsResourceGroup, 
       
         [Parameter(Mandatory = $True)]
         [string]
-        $DeploymentStorageAccountname,
+        $ArtifactsLocationStorageAccount,
 
         [string]
         $ResourceGroupLocation = "west europe",
@@ -77,13 +99,13 @@ Function New-AzureDeployment {
     
     # Staging artificats resource group
     Write-Verbose "Creating a resource group, storage account and container to store the staging artifacts"
-    $StorageAccount = (Get-AzureRmStorageAccount | Where-Object {$_.StorageAccountName -eq $deploymentStorageAccountName})
+    $StorageAccount = (Get-AzureRmStorageAccount | Where-Object {$_.StorageAccountName -eq $ArtifactsLocationStorageAccount})
 
     If ($StorageAccount -eq $null) {
     
-        New-AzureRmResourceGroup -Name $deploymentResourceGroup -Location $ResourceGroupLocation
-        New-AzureRmStorageAccount -ResourceGroupName $deploymentResourceGroup -Name $deploymentStorageAccountname -Type Standard_LRS -Location "westeurope"
-        Set-AzureRmCurrentStorageAccount -ResourceGroupName $deploymentResourceGroup -Name $deploymentStorageAccountname 
+        New-AzureRmResourceGroup -Name $ArtifactsResourceGroup -Location $ResourceGroupLocation
+        New-AzureRmStorageAccount -ResourceGroupName $ArtifactsResourceGroup -Name $ArtifactsLocationStorageAccount -Type Standard_LRS -Location "westeurope"
+        Set-AzureRmCurrentStorageAccount -ResourceGroupName $ArtifactsResourceGroup -Name $ArtifactsLocationStorageAccount 
         $containers = Get-AzureStorageContainer | Where-Object { $_.Name -eq 'templates'} 
         if ($containers -eq $null) {
             New-AzureStorageContainer -Name templates -Permission Off
@@ -103,12 +125,12 @@ Function New-AzureDeployment {
     }
 
     # Create or get the storage account for deployments
-    $StorageAccount = (Get-AzureRmStorageAccount | Where-Object {$_.StorageAccountName -eq $deploymentStorageAccountName})
+    $StorageAccount = (Get-AzureRmStorageAccount | Where-Object {$_.StorageAccountName -eq $ArtifactsLocationStorageAccount})
 
     If ($StorageAccount -eq $null) {
     
-        New-AzureRmResourceGroup -Name $deploymentResourceGroup -Location "westeurope"
-        New-AzureRmStorageAccount -ResourceGroupName $deploymentResourceGroup -Name $deploymentStorageAccountname -Type Standard_LRS -Location "westeurope"
+        New-AzureRmResourceGroup -Name $ArtifactsResourceGroup -Location "westeurope"
+        New-AzureRmStorageAccount -ResourceGroupName $ArtifactsResourceGroup -Name $ArtifactsLocationStorageAccount -Type Standard_LRS -Location "westeurope"
     }
         
     # Create DSC configuration archive
@@ -121,7 +143,7 @@ Function New-AzureDeployment {
     }
 
     # Uploading files including DCS folder
-    Set-AzureRmCurrentStorageAccount -ResourceGroupName $deploymentResourceGroup -Name $deploymentStorageAccountname 
+    Set-AzureRmCurrentStorageAccount -ResourceGroupName $ArtifactsResourceGroup -Name $ArtifactsLocationStorageAccount 
     $artifactsPath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($PSScriptRoot, '.'))
 
     $container = Get-AzureStorageContainer -Name templates 
@@ -169,7 +191,8 @@ Function New-AzureDeployment {
 
     # and add the Sas Token to the hash table
     Write-Verbose "We need to add the token to our parameters hash"
-    $OptionalParameters['_artifactsLocationSasToken'] = $token
+    $OptionalParameters['artifactsLocationSasToken'] = $token
+    $OptionalParameters['artifactsLocationStorageAccount'] = $ArtifactsLocationStorageAccount
     
     Write-Verbose ($url + $token)
     
@@ -177,20 +200,4 @@ Function New-AzureDeployment {
     Write-Verbose "Starting deployment..."
     New-AzureRmResourceGroupDeployment -Name $deploymentName -ResourceGroupName $resourceGroupName -TemplateUri ($url + $token) @OptionalParameters
 }
-
-$vars = @{
-    ClientId                     = ""
-    Secret                       = ""
-    TenantId                     = ""
-    SubscriptionId               = ""
-    ResourceGroupName            = "netscaler-mfa-poc"
-    DeploymentResourceGroup      = 'msdn-mct-deployments' 
-    DeploymentStorageAccountname = 'msdnmctartifacts'
-}
-
-New-AzureDeployment @vars -Verbose
-
-
-# For troubleshooting
-#(Get-AzureRmLog -Status "Failed"  | Select-Object -First 1) | Format-List
 
