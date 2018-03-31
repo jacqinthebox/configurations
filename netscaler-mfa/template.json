@@ -2,7 +2,10 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "_artifactsLocationSasToken": {
+        "artifactsLocationSasToken": {
+            "type": "string"
+        },
+        "artifactsLocationStorageAccount": {
             "type": "string"
         },
         "testVar": {
@@ -20,7 +23,7 @@
         },
         "adminPassword": {
             "type": "securestring",
-            "defaultValue": "123Pollie!"
+            "defaultValue": "ShouldRetrieveFromKeyVault01!"
         },
         "members": {
             "type": "int",
@@ -60,7 +63,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(variables('nestedTemplates').storageTemplateUrl, parameters('_artifactsLocationSasToken'))]",
+                    "uri": "[concat(variables('nestedTemplates').storageTemplateUrl, parameters('artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 }
             }
@@ -73,7 +76,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(variables('nestedTemplates').vnetTemplateUrl, parameters('_artifactsLocationSasToken'))]",
+                    "uri": "[concat(variables('nestedTemplates').vnetTemplateUrl, parameters('artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -235,7 +238,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(variables('nestedTemplates').netscalerTemplateUrl, parameters('_artifactsLocationSasToken'))]",
+                    "uri": "[concat(variables('nestedTemplates').netscalerTemplateUrl, parameters('artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -273,7 +276,8 @@
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIpAddresses', concat(variables('dcName'), '-pip'))]",
-                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
+                "Microsoft.Resources/deployments/vnetDeployment"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -356,7 +360,7 @@
                         "settings": {
                             "wmfVersion": "latest",
                             "configuration": {
-                                "url": "[concat('https://msdnmctartifacts.blob.core.windows.net/templates/DSC/CreateDc.zip', parameters('_artifactsLocationSasToken'))]",
+                                "url": "[concat('https://', parameters('artifactsLocationStorageAccount'),'.blob.core.windows.net/templates/DSC/CreateDc.zip', parameters('artifactsLocationSasToken'))]",
                                 "script": "[variables('DCConfigurationScript')]",
                                 "function": "[variables('DCConfigurationFunction')]"
                             },
@@ -476,7 +480,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat (variables('nestedTemplates').vnetUpdateDnsTemplateUrl, parameters('_artifactsLocationSasToken'))]",
+                    "uri": "[concat (variables('nestedTemplates').vnetUpdateDnsTemplateUrl, parameters('artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -514,7 +518,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat (variables('nestedTemplates').nicUpdateTemplateUrl, parameters('_artifactsLocationSasToken'))]",
+                    "uri": "[concat (variables('nestedTemplates').nicUpdateTemplateUrl, parameters('artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {

@@ -11,7 +11,10 @@
         "domainName": {
             "value": "mfa.local"
         },
-        "_artifactsLocationSasToken": {
+        "artifactsLocationSasToken": {
+            "value": ""
+        },
+        "artifactsLocationStorageAccount": {
             "value": ""
         }
     }
