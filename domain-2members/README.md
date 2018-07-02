@@ -4,13 +4,8 @@ Deployment script works only on Windows. Todo: create azure-cli variant.
 
 ## How to use
 
-Dot source it:
 
-```powershell
-./New-AzureDeploy.ps1
-```
-
-Then run it like this:
+Run it like this:
 
 ```powershell
 import-module cChoco -Force
@@ -32,6 +27,9 @@ $vars = @{
 # modify path if needed
 .\New-AzureDeploy.ps1 @vars -Verbose
 ```
+
+Script is also easy to use in a CD/CI pipeline.
+
 
 ## Troubleshoot
 
