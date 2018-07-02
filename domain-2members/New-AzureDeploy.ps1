@@ -1,28 +1,3 @@
-<# 
-TODO:Write better help
-Example usage:
-
-$vars = @{
-    ClientId                        = ""
-    Secret                          = ""
-    TenantId                        = ""
-    SubscriptionId                  = ""
-    ResourceGroupName               = "example-deplpyment"
-    ArtifactsResourceGroup          = 'artificacts' 
-    ArtifactsLocationStorageAccount = 'mylovelyartifacts'
-}
-
-New-AzureDeployment @vars -Verbose
-
-# For troubleshooting
-# (Get-AzureRmLog -Status "Failed"  | Select-Object -First 1) | Format-List
-
-#>
-
-
-
-#Function New-AzureDeployment {
-
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $True)]
@@ -200,5 +175,4 @@ New-AzureDeployment @vars -Verbose
     # Now everything is in place to start the deployment of the ARM template
     Write-Verbose "Starting deployment..."
     New-AzureRmResourceGroupDeployment -Name $deploymentName -ResourceGroupName $resourceGroupName -TemplateUri ($url + $token) @OptionalParameters
-#}
 
