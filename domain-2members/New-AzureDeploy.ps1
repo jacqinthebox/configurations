@@ -21,7 +21,7 @@ New-AzureDeployment @vars -Verbose
 
 
 
-Function New-AzureDeployment {
+#Function New-AzureDeployment {
 
     [CmdletBinding()]
     param(
@@ -200,5 +200,5 @@ Function New-AzureDeployment {
     # Now everything is in place to start the deployment of the ARM template
     Write-Verbose "Starting deployment..."
     New-AzureRmResourceGroupDeployment -Name $deploymentName -ResourceGroupName $resourceGroupName -TemplateUri ($url + $token) @OptionalParameters
-}
+#}
 
