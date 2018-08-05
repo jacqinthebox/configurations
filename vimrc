@@ -39,7 +39,9 @@ nnoremap <S-l> gt
 "may change from system to system
 set t_Co=256
 "set clipboard=unnamedplus
-set background=dark
-"colorscheme solarized
-let g:airline_theme='solarized'
+background=dark
+colorscheme hybrid_material
+let g:airline_theme='base16'
 set fillchars=""
+set termguicolors
+
