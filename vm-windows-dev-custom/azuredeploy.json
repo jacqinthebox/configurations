@@ -1,0 +1,221 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "storageType": {
+      "type": "string",
+      "defaultValue": "Standard_LRS"
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_B2ms",
+      "allowedValues": [
+        "Standard_B2ms",
+        "Standard_B2",
+        "Standard_D2_v2"
+      ]
+    },
+    "vmName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "vmAdminUsername": {
+      "type": "string",
+      "minLength": 1
+    },
+    "adminPassword": {
+      "type": "securestring"
+    },
+    "osVersion": {
+      "type": "string",
+      "defaultValue": "2016-Datacenter"
+    },
+    "isDevMachine": {
+      "type": "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "If Yes, it installs Chocolatey, Git, Visual Studio Code and a few other niceties"
+      }
+    }
+  },
+  "variables": {
+    "vmpipDnsName": "[parameters('vmName')]",
+    "vnetPrefix": "10.11.0.0/16",
+    "vnetSubnet1Name": "servers",
+    "vnetSubnet1Prefix": "10.11.1.0/24",
+    "mystorageName": "[concat('mydisks', uniqueString(resourceGroup().id))]",
+    "vmImagePublisher": "MicrosoftWindowsServer",
+    "vmImageOffer": "WindowsServer",
+    "vmOSDiskName": "vmOsDisk",
+    "vmVmSize": "[parameters('vmSize')]",
+    "vmVnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'vnet')]",
+    "vmSubnetRef": "[concat(variables('vmVnetID'), '/subnets/', variables('vnetSubnet1Name'))]",
+    "vmStorageAccountContainerName": "vhds",
+    "vmNicName": "[concat(parameters('vmName'), 'NetworkInterface')]",
+    "vmpipName": "vmpip",
+    "hostDNSNameScriptArgument": "[concat('*.',resourceGroup().location,'.cloudapp.azure.com')]"
+  },
+  "resources": [
+    {
+      "name": "vnet",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "vnet"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vnetPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('vnetSubnet1Name')]",
+            "properties": {
+              "addressPrefix": "[variables('vnetSubnet1Prefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('mystorageName')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-01-01",
+      "sku": {
+        "name": "[parameters('storageType')]"
+      },
+      "dependsOn": [],
+      "tags": {
+        "displayName": "storage"
+      },
+      "kind": "Storage"
+    },
+    {
+      "name": "[variables('vmNicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', 'vnet')]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('vmpipName'))]"
+      ],
+      "tags": {
+        "displayName": "vmNic"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('vmSubnetRef')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('vmpipName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[parameters('vmName')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('mystorageName'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('vmNicName'))]"
+      ],
+      "tags": {
+        "displayName": "vm"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmVmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('vmAdminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('vmImagePublisher')]",
+            "offer": "[variables('vmImageOffer')]",
+            "sku": "[parameters('osVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "vmOSDisk",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('mystorageName')), '2016-01-01').primaryEndpoints.blob, variables('vmStorageAccountContainerName'), '/', variables('vmOSDiskName'), '.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('vmNicName'))]"
+            }
+          ]
+        }
+      },
+      "resources": [
+        {
+          "name": "mycustom",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2016-03-30",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+          ],
+          "tags": {
+            "displayName": "mywinrm"
+          },
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.4",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file Bootstrap.ps1 ',variables('hostDNSNameScriptArgument') ,' ',parameters('isDevMachine'))]",
+              "fileUris": [
+                "https://raw.githubusercontent.com/jacqinthebox/presentations/master/arm-templates/vm-windows-dev-custom/Bootstrap.ps1"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "[variables('vmpipName')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "vmpip"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('vmpipDnsName')]"
+        }
+      }
+    }
+  ],
+  "outputs": {}
+}
