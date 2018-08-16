@@ -1,0 +1,248 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "mystorageType": {
+        "type": "string",
+        "defaultValue": "Standard_LRS"
+      },
+      "myVmName": {
+        "type": "string",
+        "minLength": 1
+      },
+      "myVmAdminUserName": {
+        "type": "string",
+        "minLength": 1
+      },
+      "myVmAdminPassword": {
+        "type": "securestring"
+      },
+      "myVmWindowsOSVersion": {
+        "type": "string",
+        "defaultValue": "2016-Datacenter"
+      },
+      "myVmIsADevMachine": {
+        "type": "string",
+        "defaultValue": "No",
+        "allowedValues": [
+          "Yes",
+          "No"
+        ],
+        "metadata": {
+          "description": "If Yes, it installs Chocolatey, Git, Visual Studio Code and a few other niceties"
+        }
+      },
+      "_artifactsLocation": {
+        "type": "string",
+        "metadata": {
+          "description": "Auto-generated container in staging storage account to receive post-build staging folder upload"
+        }
+      },
+      "_artifactsLocationSasToken": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Auto-generated token to access _artifactsLocation"
+        }
+      }
+    },
+    "variables": {
+      "myVmpipDnsName": "[parameters('myVmName')]",
+      "myVm-vnetPrefix": "10.11.0.0/16",
+      "myVm-vnetSubnet1Name": "servers",
+      "myVm-vnetSubnet1Prefix": "10.11.1.0/24",
+      "mystorageName": "[concat('mydisks', uniqueString(resourceGroup().id))]",
+      "myVmImagePublisher": "MicrosoftWindowsServer",
+      "myVmImageOffer": "WindowsServer",
+      "myVmOSDiskName": "myVmOSDisk",
+      "myVmVmSize": "Standard_D2_v2",
+      "myVmVnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'myVm-vnet')]",
+      "myVmSubnetRef": "[concat(variables('myVmVnetID'), '/subnets/', variables('myVm-vnetSubnet1Name'))]",
+      "myVmStorageAccountContainerName": "vhds",
+      "myVmNicName": "[concat(parameters('myVmName'), 'NetworkInterface')]",
+      "myVmpipName": "myVmpip",
+      "hostDNSNameScriptArgument": "[concat('*.',resourceGroup().location,'.cloudapp.azure.com')]",
+      "myDSCExtensionArchiveFolder": "DSC",
+      "myDSCExtensionArchiveFileName": "myDSCExtension.zip"
+    },
+    "resources": [
+      {
+        "name": "myVm-vnet",
+        "type": "Microsoft.Network/virtualNetworks",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2016-03-30",
+        "dependsOn": [],
+        "tags": {
+          "displayName": "myVm-vnet"
+        },
+        "properties": {
+          "addressSpace": {
+            "addressPrefixes": [
+              "[variables('myVm-vnetPrefix')]"
+            ]
+          },
+          "subnets": [
+            {
+              "name": "[variables('myVm-vnetSubnet1Name')]",
+              "properties": {
+                "addressPrefix": "[variables('myVm-vnetSubnet1Prefix')]"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "[variables('mystorageName')]",
+        "type": "Microsoft.Storage/storageAccounts",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2016-01-01",
+        "sku": {
+          "name": "[parameters('mystorageType')]"
+        },
+        "dependsOn": [],
+        "tags": {
+          "displayName": "mystorage"
+        },
+        "kind": "Storage"
+      },
+      {
+        "name": "[variables('myVmNicName')]",
+        "type": "Microsoft.Network/networkInterfaces",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2016-03-30",
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/virtualNetworks', 'myVm-vnet')]",
+          "[resourceId('Microsoft.Network/publicIPAddresses', variables('myVmpipName'))]"
+        ],
+        "tags": {
+          "displayName": "myVmNic"
+        },
+        "properties": {
+          "ipConfigurations": [
+            {
+              "name": "ipconfig1",
+              "properties": {
+                "privateIPAllocationMethod": "Dynamic",
+                "subnet": {
+                  "id": "[variables('myVmSubnetRef')]"
+                },
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('myVmpipName'))]"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "[parameters('myVmName')]",
+        "type": "Microsoft.Compute/virtualMachines",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2015-06-15",
+        "dependsOn": [
+          "[resourceId('Microsoft.Storage/storageAccounts', variables('mystorageName'))]",
+          "[resourceId('Microsoft.Network/networkInterfaces', variables('myVmNicName'))]"
+        ],
+        "tags": {
+          "displayName": "myVm"
+        },
+        "properties": {
+          "hardwareProfile": {
+            "vmSize": "[variables('myVmVmSize')]"
+          },
+          "osProfile": {
+            "computerName": "[parameters('myVmName')]",
+            "adminUsername": "[parameters('myVmAdminUsername')]",
+            "adminPassword": "[parameters('myVmAdminPassword')]"
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "[variables('myVmImagePublisher')]",
+              "offer": "[variables('myVmImageOffer')]",
+              "sku": "[parameters('myVmWindowsOSVersion')]",
+              "version": "latest"
+            },
+            "osDisk": {
+              "name": "myVmOSDisk",
+              "vhd": {
+                "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('mystorageName')), '2016-01-01').primaryEndpoints.blob, variables('myVmStorageAccountContainerName'), '/', variables('myVmOSDiskName'), '.vhd')]"
+              },
+              "caching": "ReadWrite",
+              "createOption": "FromImage"
+            }
+          },
+          "networkProfile": {
+            "networkInterfaces": [
+              {
+                "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('myVmNicName'))]"
+              }
+            ]
+          }
+        },
+        "resources": [
+          {
+            "name": "Microsoft.Powershell.DSC",
+            "type": "extensions",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-03-30",
+            "dependsOn": [
+              "[resourceId('Microsoft.Compute/virtualMachines', parameters('myVmName'))]"
+            ],
+            "tags": {
+              "displayName": "myDSCExtension"
+            },
+            "properties": {
+              "publisher": "Microsoft.Powershell",
+              "type": "DSC",
+              "typeHandlerVersion": "2.9",
+              "autoUpgradeMinorVersion": true,
+              "settings": {
+                "configuration": {
+                  "url": "[concat(parameters('_artifactsLocation'), '/', variables('myDSCExtensionArchiveFolder'), '/', variables('myDSCExtensionArchiveFileName'))]",
+                  "script": "myDSCExtension.ps1",
+                  "function": "Main"
+                },
+                "configurationArguments": {
+                  "nodeName": "[parameters('myVmName')]"
+                }
+              },
+              "protectedSettings": {
+                "configurationUrlSasToken": "[parameters('_artifactsLocationSasToken')]"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "[variables('myVmpipName')]",
+        "type": "Microsoft.Network/publicIPAddresses",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2016-03-30",
+        "dependsOn": [],
+        "tags": {
+          "displayName": "myVmpip"
+        },
+        "properties": {
+          "publicIPAllocationMethod": "Dynamic",
+          "dnsSettings": {
+            "domainNameLabel": "[variables('myVmpipDnsName')]"
+          }
+        }
+      }
+    ],
+    "outputs": {}
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
