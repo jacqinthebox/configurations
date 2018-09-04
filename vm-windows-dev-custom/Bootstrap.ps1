@@ -7,10 +7,7 @@ $software = @(
     'conemu',
     'googlechrome',
     'notepadplusplus',
-    'conemu',
-    'soapui',
-    'visualstudio2017enterprise',
-    'resharper'
+    'conemu'
 )
 
 
