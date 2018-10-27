@@ -112,3 +112,40 @@ kubectl -n kube-system apply -f https://raw.githubusercontent.com/coreos/flannel
 Also look here:  
 
 [http://joecreager.com/troubleshooting-kubernetes-worker-node-notready/](http://joecreager.com/troubleshooting-kubernetes-worker-node-notready/)
+
+
+### Dashoard
+
+Download kubectl on your desktop and copy the K8s config file to the .kube folder.
+
+This guy is the best:  
+[https://iamchuka.com/install-kubernetes-dashboard-part-iii/](https://iamchuka.com/install-kubernetes-dashboard-part-iii/)
+
+```sh
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recomm
+ended/kubernetes-dashboard.yaml
+
+kubectl proxy
+
+http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/#!/login
+
+```
+
+We need to create the admin user: 
+
+```
+kubectl apply -f https://gist.githubusercontent.com/chukaofili/9e94d966e73566eba5abdca7ccb067e6/raw/0f17cd37d2932fb4c3a2e7f4434d08bc64432090/k8s-dashboard-admin-user.yaml
+```
+
+Get the token. This is a bit verbose  
+
+```sh
+ kubectl get sa
+ kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
+ kubectl get sa admin-user -n kube-system
+ kubectl describe sa admin-user -n kube-system
+ kubectl describe secret admin-user-token-5mrvc -n kube-system
+```
+
+Paste the token in the login form.
+
