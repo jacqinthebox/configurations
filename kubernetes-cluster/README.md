@@ -35,7 +35,7 @@ On every node:
 * become root 
 * paste your public key to authorized_keys
 * in sshd_config uncomment PermitRootLogin
-* in sshd_config uncomment autherized_keys file
+* in sshd_config uncomment authorized_keys file
 * `service sshd restart`
 
 
@@ -52,6 +52,8 @@ sudo apt install ansible -y
 
 ## Create and edit the host file (replace the ip's)
 
+Again on the console machine: 
+
 ```sh
 wget https://raw.githubusercontent.com/jacqinthebox/arm-templates-and-configs/master/kubernetes-cluster/hosts
 
@@ -59,6 +61,8 @@ wget https://raw.githubusercontent.com/jacqinthebox/arm-templates-and-configs/ma
 
 
 ## Fetch the Ansible playbooks
+
+On the console machine:  
 
 ```sh
 mkdir ~/kube-cluster
@@ -71,10 +75,40 @@ wget https://raw.githubusercontent.com/jacqinthebox/arm-templates-and-configs/ma
 
 ## Execute the playbooks
 
-```
+On the console machine:  
+
+```sh
 ansible-playbook -i hosts ~/kube-cluster/initial.yml
 ansible-playbook -i hosts ~/kube-cluster/kube-dependencies.yml
 ansible-playbook -i hosts ~/kube-cluster/master.yml
 ansible-playbook -i hosts ~/kube-cluster/workers.yml
 
 ```
+
+## Check it out
+
+
+
+```
+sh root@masternode_ip
+
+kubectl get nodes
+
+```
+
+If they are not ready there might be a problem with flannel.
+
+
+```
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.10.0/Documentation/kube-flannel.yml
+
+```
+or:  
+
+```
+kubectl -n kube-system apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
+```
+
+Also look here:  
+
+[http://joecreager.com/troubleshooting-kubernetes-worker-node-notready/](http://joecreager.com/troubleshooting-kubernetes-worker-node-notready/)
