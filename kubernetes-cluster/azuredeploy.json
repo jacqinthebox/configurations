@@ -78,7 +78,8 @@
                             "subnet": {
                                 "id": "[variables('subnetRef')]"
                             },
-                            "privateIPAllocationMethod": "Dynamic",
+                            "PrivateIpAddress": "172.16.10.11",
+                            "PrivateIpAllocationMethod": "Static",
                             "publicIpAddress": {
                                 "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('masterPublicIpName'))]"
                             }
@@ -109,7 +110,8 @@
                             "subnet": {
                                 "id": "[variables('subnetRef')]"
                             },
-                            "privateIPAllocationMethod": "Dynamic",
+                            "PrivateIpAddress": "172.16.10.12",
+                            "PrivateIpAllocationMethod": "Static",
                             "publicIpAddress": {
                                 "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('node01PublicIpName'))]"
                             }
@@ -140,7 +142,8 @@
                             "subnet": {
                                 "id": "[variables('subnetRef')]"
                             },
-                            "privateIPAllocationMethod": "Dynamic",
+                            "PrivateIpAddress": "172.16.10.13",
+                            "PrivateIpAllocationMethod": "Static",
                             "publicIpAddress": {
                                 "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('node02PublicIpName'))]"
                             }
@@ -171,7 +174,8 @@
                             "subnet": {
                                 "id": "[variables('subnetRef')]"
                             },
-                            "privateIPAllocationMethod": "Dynamic",
+                            "PrivateIpAddress": "172.16.10.10",
+                            "PrivateIpAllocationMethod": "Static",
                             "publicIpAddress": {
                                 "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('consolePublicIpName'))]"
                             }
@@ -373,7 +377,7 @@
                     ]
                 },
                 "osProfile": {
-                    "computerName": "[parameters('masterVirtualMachineName')]",
+                    "computerName": "[parameters('node01VirtualMachineName')]",
                     "adminUsername": "[parameters('adminUsername')]",
                     "adminPassword": "[parameters('adminPassword')]"
                 }
@@ -416,7 +420,7 @@
                     ]
                 },
                 "osProfile": {
-                    "computerName": "[parameters('masterVirtualMachineName')]",
+                    "computerName": "[parameters('node02VirtualMachineName')]",
                     "adminUsername": "[parameters('adminUsername')]",
                     "adminPassword": "[parameters('adminPassword')]"
                 }
