@@ -1,0 +1,16 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: create the 'provision' user
+      user: name=provision append=yes state=present createhome=yes shell=/bin/bash
+
+    - name: allow 'provision' to have passwordless sudo
+      lineinfile:
+        dest: /etc/sudoers
+        line: 'provision ALL=(ALL) NOPASSWD: ALL'
+        validate: 'visudo -cf %s'
+
+    - name: set up authorized keys for the provision user
+      authorized_key: user=provision key="{{item}}"
+      with_file:
+        - ~/.ssh/id_rsa.pub
