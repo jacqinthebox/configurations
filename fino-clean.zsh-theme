@@ -1,4 +1,4 @@
-# fino.zsh-theme
+# my personal take on the fino.zsh-theme
 
 # Use with a dark background and 256-color terminal!
 # Meant for people with rbenv and git. Tested only on OS X 10.7.
