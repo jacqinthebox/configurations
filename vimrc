@@ -37,11 +37,8 @@ nnoremap <S-h> gT
 nnoremap <S-l> gt
 
 "may change from system to system
-set t_Co=256
-"set clipboard=unnamedplus
-background=dark
-colorscheme hybrid_material
-let g:airline_theme='base16'
+set background=dark
+colorscheme solarized
 set fillchars=""
-set termguicolors
+
 
