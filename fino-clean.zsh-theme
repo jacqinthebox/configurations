@@ -1,4 +1,5 @@
-# my personal take on the fino.zsh-theme
+# theme, based on:
+# fino.zsh-theme
 
 # Use with a dark background and 256-color terminal!
 # Meant for people with rbenv and git. Tested only on OS X 10.7.
@@ -12,7 +13,7 @@
 # Also borrowing from http://stevelosh.com/blog/2010/02/my-extravagant-zsh-prompt/
 
 function prompt_char {
-  git branch >/dev/null 2>/dev/null && echo "±" && return
+  git branch >/dev/null 2>/dev/null && echo "@" && return
   echo '○'
 }
 
@@ -33,7 +34,7 @@ local git_info='$(git_prompt_info)'
 local prompt_char='$(prompt_char)'
 
 
-PROMPT="╭─%{$FG[230]%}>%{$reset_color%} %{$terminfo[bold]$FG[153]%}%~ %{$reset_color%}${git_info} %{$FG[239]%}${ruby_env}
+PROMPT="╭─%{$FG[230]%}>%{$reset_color%} %{$terminfo[bold]$FG[003]%}%~ %{$reset_color%}${git_info} %{$FG[239]%}${ruby_env}
 ╰─${prompt_char}%{$reset_color%} "
 
 ZSH_THEME_GIT_PROMPT_PREFIX="%{$fg[255]%}"
