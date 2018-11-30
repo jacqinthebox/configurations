@@ -34,7 +34,7 @@ local git_info='$(git_prompt_info)'
 local prompt_char='$(prompt_char)'
 
 
-PROMPT="╭─%{$FG[230]%}>%{$reset_color%} %{$terminfo[bold]$FG[003]%}%~ %{$reset_color%}${git_info} %{$FG[239]%}${ruby_env}
+PROMPT="╭─%{$FG[230]%}>%{$reset_color%} %{$terminfo[bold]$FG[003]%}%~ %{$reset_color%}${git_info} 
 ╰─${prompt_char}%{$reset_color%} "
 
 ZSH_THEME_GIT_PROMPT_PREFIX="%{$fg[255]%}"
