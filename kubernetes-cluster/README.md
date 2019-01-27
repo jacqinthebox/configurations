@@ -113,39 +113,174 @@ Also look here:
 
 [http://joecreager.com/troubleshooting-kubernetes-worker-node-notready/](http://joecreager.com/troubleshooting-kubernetes-worker-node-notready/)
 
-
-### Dashoard
-
-Download kubectl on your desktop and copy the K8s config file to the .kube folder.
-
-This guy is the best:  
-[https://iamchuka.com/install-kubernetes-dashboard-part-iii/](https://iamchuka.com/install-kubernetes-dashboard-part-iii/)
+# Install a single node
 
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recomm
-ended/kubernetes-dashboard.yaml
+#!/bin/bash
+echo "installing docker"
+apt-get update && apt-get upgrade -y
+apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    software-properties-common \
+    docker.io
 
-kubectl proxy
+systemctl start docker &&  systemctl enable docker
+usermod -aG docker $USER
 
-http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/#!/login
+echo "installing kubernetes"
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
+deb http://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+apt-get update && apt-get install -y kubelet kubeadm kubectl
 
+echo "deploying kubernetes with flannel"
+kubeadm init --pod-network-cidr=10.244.0.0/16 #--apiserver-advertise-address=192.168.2.171
+export KUBECONFIG=/etc/kubernetes/admin.conf
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
 ```
 
-We need to create the admin user: 
+Export the config
 
 ```
-kubectl apply -f https://gist.githubusercontent.com/chukaofili/9e94d966e73566eba5abdca7ccb067e6/raw/0f17cd37d2932fb4c3a2e7f4434d08bc64432090/k8s-dashboard-admin-user.yaml
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-Get the token. This is a bit verbose  
-
-```sh
- kubectl get sa
- kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
- kubectl get sa admin-user -n kube-system
- kubectl describe sa admin-user -n kube-system
- kubectl describe secret admin-user-token-5mrvc -n kube-system
+Taint the node
+```
+kubectl taint nodes --all node-role.kubernetes.io/master-
 ```
 
-Paste the token in the login form.
+Install the dashboard
+#https://docs.giantswarm.io/guides/install-kubernetes-dashboard/
+```
+kubectl get pods --all-namespaces
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
+
+kubectl create serviceaccount cluster-admin-dashboard-sa
+kubectl create clusterrolebinding cluster-admin-dashboard-sa \
+  --clusterrole=cluster-admin \
+  --serviceaccount=default:cluster-admin-dashboard-sa
+
+kubectl get secret | grep cluster-admin-dashboard-sa
+```
+
+# Install something
+
+```bash
+cat > microbot-daemonset.yaml <<EOF
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: microbot-app-1
+  namespace: microbots-dev
+  labels:
+    app: microbots
+spec:
+  selector:
+    matchLabels:
+      name: microbot-app-1
+  template:
+    metadata:
+      labels:
+        name: microbot-app-1
+    spec:
+      containers:
+      - name: microbot1
+        image: jacqueline/microbot:model-1.2
+        ports:
+        - containerPort: 80
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: microbot-app-2
+  namespace: microbots-dev
+  labels:
+    app: microbots
+spec:
+  selector:
+    matchLabels:
+      name: microbot-app-2
+  template:
+    metadata:
+      labels:
+        name: microbot-app-2
+    spec:
+      containers:
+      - name: microbot1
+        image: jacqueline/microbot:model-2.2
+        ports:
+        - containerPort: 80
+EOF
+```
+
+Now the services
+
+
+```
+cat > microbot-service.yaml <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: microbot-service-1
+  namespace: microbots-dev
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    name: http
+  selector:
+    name: microbot-app-1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: microbot-service-2
+  namespace: microbots-dev
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    name: http
+  selector:
+    name: microbot-app-2
+EOF
+```
+
+Now the Ingress
+https://github.com/containous/traefik/pull/3582
+Don't forget the base url for this to work.
+
+```yml
+cat > microbot-ingress.yaml <<EOF
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: microbots-ingress
+  namespace: microbots-dev
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.frontend.rule.type: PathPrefixStrip
+    # traefik.ingress.kubernetes.io/rewrite-target: "/"
+spec:
+  rules:
+  - host: dev.microbots.io
+    http:
+      paths:
+      - path: /microbot1
+        backend:
+          serviceName: microbot-service-1
+          servicePort: http
+      - path: /microbot2
+        backend:
+          serviceName: microbot-service-2
+          servicePort: http
+EOF
+```
+
 
