@@ -11,6 +11,16 @@
      apt:
        name: apt-transport-https
        state: present
+  
+   - name: install ca-certificates
+     apt:
+       name: ca-certificates
+       state: present
+
+   - name: install software-properties-common
+     apt:
+       name: software-properties-common
+       state: present
 
    - name: add Kubernetes apt-key
      apt_key:
