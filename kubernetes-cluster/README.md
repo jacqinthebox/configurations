@@ -28,14 +28,15 @@ az group delete --name kube-cluster-jacq
 
 ## Make sure you can login as root on all the nodes
 
-* execute `ssh-keygen` on the console node
+* execute `ssh-keygen` on your console
 
 On every node:  
 
 * become root 
-* paste your public key to authorized_keys
-* in sshd_config uncomment PermitRootLogin
-* in sshd_config uncomment authorized_keys file
+* paste the pub key of your console to authorized_keys of the node
+* in sshd_config set PermitRootLogin prohibit-password
+* set PubkeyAuthentication yes
+* uncomment authorized_keys file
 * `service sshd restart`
 
 
