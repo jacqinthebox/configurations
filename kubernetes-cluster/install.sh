@@ -41,6 +41,8 @@ kubectl taint nodes --all node-role.kubernetes.io/master-
 echo "\nInstall Dashboard and Helm. Then sleep 20 seconds for the Tiller pod to get ready\n"
 kubectl create serviceaccount cluster-admin-dashboard-sa
 kubectl create clusterrolebinding cluster-admin-dashboard-sa --clusterrole=cluster-admin --serviceaccount=default:cluster-admin-dashboard-sa
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
+
 curl https://raw.githubusercontent.com/helm/helm/master/scripts/get | bash
 kubectl create clusterrolebinding permissive-binding --clusterrole=cluster-admin --user=admin --user=kubelet --group=system:serviceaccounts
 helm init --service-account default
