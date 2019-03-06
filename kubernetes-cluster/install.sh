@@ -7,7 +7,7 @@ swapoff -a
 cp /etc/fstab ~/fstab.old
 sed -i '2 d' /etc/fstab
 
-echo "\nInstalling docker!\n"
+echo "\nInstalling Docker!\n"
 apt-get update && apt-get install -y apt-transport-https ca-certificates software-properties-common docker.io
 systemctl start docker &&  systemctl enable docker
 usermod -aG docker $USER
