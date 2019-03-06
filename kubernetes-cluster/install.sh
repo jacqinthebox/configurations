@@ -2,17 +2,17 @@
 
 if [ ! -f /tmp/installed ]; then
 
-echo "\nturning off swap\n"
+echo "\nTurning off swap\n"
 swapoff -a
 cp /etc/fstab ~/fstab.old
 sed -i '2 d' /etc/fstab
 
-echo "\ninstalling docker\n"
+echo "\nInstalling docker!\n"
 apt-get update && apt-get install -y apt-transport-https ca-certificates software-properties-common docker.io
 systemctl start docker &&  systemctl enable docker
 usermod -aG docker $USER
 
-echo "\ninstalling kubernetes\n"
+echo "\nInstalling Kubernetes\n"
 apt-get update && apt-get install -y apt-transport-https curl
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
@@ -21,7 +21,7 @@ EOF
 apt-get update
 apt-get install -y kubelet kubeadm kubectl
 
-echo "\ndeploying kubernetes with flannel\n"
+echo "\nDeploying kubernetes with the Flannel network overlay\n"
 kubeadm init --pod-network-cidr=10.244.0.0/16
 export KUBECONFIG=/etc/kubernetes/admin.conf
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
@@ -30,7 +30,7 @@ else
         echo "It looks like you installed Kubernetes already"
 fi
 
-echo "\narranging access to the cluster for $(logname)\n"
+echo "\nArranging access to the cluster for $(logname)\n"
 mkdir -p /home/$(logname)/.kube
 sudo cp /etc/kubernetes/admin.conf /home/$(logname)/.kube/config
 sudo chown $(logname):$(logname) /home/$(logname)/.kube/config
@@ -50,4 +50,4 @@ helm install stable/nginx-ingress --namespace kube-system --set controller.hostN
 echo "\nCreate some log folders\n"
 mkdir -p /var/peterconnects/db
 
-echo "\nDone\n"
+echo "\nAll done!\n"
