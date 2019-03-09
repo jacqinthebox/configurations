@@ -21,9 +21,12 @@ EOF
 apt-get update
 apt-get install -y kubelet kubeadm kubectl
 
-echo "\nDeploying kubernetes with the Flannel network overlay\n"
+echo "\nRunning kubeadm\n"
 kubeadm init --pod-network-cidr=10.244.0.0/16 
 export KUBECONFIG=/etc/kubernetes/admin.conf
+
+
+echo "\nInstalling Flannel\n"
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
 touch /tmp/installed
 else
