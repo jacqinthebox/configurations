@@ -63,7 +63,7 @@ done
 
 echo "[postdeployment] Install Ingress"
 
-helm install stable/nginx-ingress --namespace kube-system --set controller.hostNetwork=true --set rbac.create=true --set controller.kind=DaemonSet
+helm install stable/nginx-ingress --name attendantv1 --namespace kube-system --set controller.hostNetwork=true --set rbac.create=true --set controller.kind=Deployment --set controller.extraArgs.v=2 --set controller.extraArgs.tcp-services-configmap=default/sql-services
 
 echo "[postdeployment] Creating shared folders to mount into the pods"
 mkdir -p /var/peterconnects/db
