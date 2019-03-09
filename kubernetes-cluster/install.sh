@@ -67,7 +67,10 @@ helm install stable/nginx-ingress --name v1 --namespace kube-system --set contro
 
 echo "[postdeployment] Exposing port 1433"
 kubectl apply -f https://raw.githubusercontent.com/jacqinthebox/arm-templates-and-configs/optimize-kube/kubernetes-cluster/v21-ingress-deployment.yaml
-kubectl apply -f https://raw.githubusercontent.com/jacqinthebox/arm-templates-and-configs/optimize-kube/kubernetes-cluster/sql-server-configmap.yaml 
+kubectl apply -f https://raw.githubusercontent.com/jacqinthebox/arm-templates-and-configs/optimize-kube/kubernetes-cluster/sql-server-configmap.yaml
+
+echo "[postdeployment] Set the Kubernetes Dashboard to NodePort"
+kubectl -n kube-system get service/kubernetes-dashboard -o yaml | sed "s/type: ClusterIP/type: NodePort/" | kubectl replace -f -
 
 echo "[postdeployment] Creating shared folders to mount into the pods"
 mkdir -p /var/peterconnects/db

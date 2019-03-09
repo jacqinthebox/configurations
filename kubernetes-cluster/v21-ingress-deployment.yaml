@@ -42,7 +42,7 @@ spec:
         - --election-id=ingress-controller-leader
         - --ingress-class=nginx
         - --configmap=kube-system/v1-nginx-ingress-controller
-        - --tcp-services-configmap=default/sql-services
+        - --tcp-services-configmap=default/sql-server
         - --v=2
         env:
         - name: POD_NAME
