@@ -65,7 +65,7 @@ echo "[postdeployment] Install Ingress"
 
 helm install stable/nginx-ingress --namespace kube-system --set controller.hostNetwork=true --set rbac.create=true --set controller.kind=DaemonSet
 
-echo "[postdeployment] Create some log folders"
+echo "[postdeployment] Creating shared folders to mount into the pods"
 mkdir -p /var/peterconnects/db
 
-echo "[end]All done. If you want do reinitialize the cluster, run kubeadm reset --force AND delete the /tmp/installed file."
+echo "[end] All done. If you want do reinitialize the cluster, run kubeadm reset --force AND delete the /tmp/installed file."
