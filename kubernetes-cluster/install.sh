@@ -46,11 +46,20 @@ kubectl create serviceaccount cluster-admin-dashboard-sa
 kubectl create clusterrolebinding cluster-admin-dashboard-sa --clusterrole=cluster-admin --serviceaccount=default:cluster-admin-dashboard-sa
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
 
-echo "\nInstall Helm, sleep 20 seconds for the Tiller pod to get ready and then install Ingress\n"
+echo "\nInstall Helm, wait for the Tiller pod to get ready and then install Ingress\n"
+
 curl https://raw.githubusercontent.com/helm/helm/master/scripts/get | bash
 kubectl create clusterrolebinding permissive-binding --clusterrole=cluster-admin --user=admin --user=kubelet --group=system:serviceaccounts
 helm init --service-account default
-sleep 20s
+
+ATTEMPTS=0
+ROLLOUT_STATUS_CMD="kubectl rollout status deployment/tiller-deploy -n kube-system"
+until $ROLLOUT_STATUS_CMD || [ $ATTEMPTS -eq 60 ]; do
+  $ROLLOUT_STATUS_CMD
+  ATTEMPTS=$((attempts + 1))
+  sleep 10
+done
+
 helm install stable/nginx-ingress --namespace kube-system --set controller.hostNetwork=true --set rbac.create=true --set controller.kind=DaemonSet
 
 echo "\nCreate some log folders\n"
