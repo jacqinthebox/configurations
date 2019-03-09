@@ -22,12 +22,12 @@ apt-get update
 apt-get install -y kubelet kubeadm kubectl
 
 echo "\nDeploying kubernetes with the Flannel network overlay\n"
-kubeadm init --pod-network-cidr=10.244.0.0/16
+kubeadm init --pod-network-cidr=10.244.0.0/16 --cluster-name "$HOST-cluster"
 export KUBECONFIG=/etc/kubernetes/admin.conf
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
 touch /tmp/installed
 else
-        echo "It looks like you installed Kubernetes already"
+        echo "It looks like you installed already installed Kubernetes"
 fi
 
 echo "\nArranging access to the cluster for $(logname)\n"
