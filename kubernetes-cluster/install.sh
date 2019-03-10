@@ -22,9 +22,9 @@ apt-get update
 apt-get install -y kubelet kubeadm kubectl
 
 echo "[kube-install] Running kubeadm"
-kubeadm init --pod-network-cidr=10.244.0.0/16 
+wget 
+kubeadm init --config=kubeadm-config.yaml #--pod-network-cidr=10.244.0.0/16 
 export KUBECONFIG=/etc/kubernetes/admin.conf
-
 
 echo "[postdeployment] Installing Flannel"
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
