@@ -11,8 +11,9 @@ fi
 
 echo "[prepare] Creating the config file for kubeadm with clustername $1"
 
-if [ -f kubeadm-config.yaml*  ]; then
-    rm kubeadm-config.yaml*
+if [ -f kubeadm-config.yaml  ]; then
+    echo "There is already a kubeadm-config.yaml. Please delete it first"
+    exit 2
 fi
 
 cat > kubeadm-config.yaml <<EOF
