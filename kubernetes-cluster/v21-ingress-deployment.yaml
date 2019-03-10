@@ -1,6 +1,7 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
+  namespace: kube-system
   annotations:
     deployment.kubernetes.io/revision: "1"
   creationTimestamp: null
@@ -42,7 +43,7 @@ spec:
         - --election-id=ingress-controller-leader
         - --ingress-class=nginx
         - --configmap=kube-system/v1-nginx-ingress-controller
-        - --tcp-services-configmap=default/sql-server
+        - --tcp-services-configmap=default/sql-server-configmap
         - --v=2
         env:
         - name: POD_NAME
