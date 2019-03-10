@@ -2,6 +2,22 @@
 
 if [ ! -f /tmp/installed ]; then
 
+if [ -z "$1" ]
+then
+	echo "You forgot the clustername. You should run the script with a variable like so: sudo ./install.sh clustername"
+	echo "Exiting"
+	exit 2
+fi
+
+echo "[prepare] Creating the config file for kubeadm"
+cat > kubeadm-config.yaml <<EOF
+apiVersion: kubeadm.k8s.io/v1beta1
+kind: ClusterConfiguration
+clusterName: $1
+networking:
+  podSubnet: 10.244.0.0/16
+EOF
+
 echo "[prepare] Turning off swap"
 swapoff -a
 cp /etc/fstab ~/fstab.old
