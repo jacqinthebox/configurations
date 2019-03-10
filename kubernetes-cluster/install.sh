@@ -10,6 +10,11 @@ then
 fi
 
 echo "[prepare] Creating the config file for kubeadm with clustername $1"
+
+if [ -f kubeadm-config.yaml  ]; then
+    rm kubeadm-config.yaml
+fi
+
 cat > kubeadm-config.yaml <<EOF
 apiVersion: kubeadm.k8s.io/v1beta1
 kind: ClusterConfiguration
