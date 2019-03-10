@@ -44,7 +44,6 @@ apt-get update
 apt-get install -y kubelet kubeadm kubectl
 
 echo "[kube-install] Running kubeadm"
-wget https://raw.githubusercontent.com/jacqinthebox/arm-templates-and-configs/optimize-kube/kubernetes-cluster/kubeadm-config.yaml 
 kubeadm init --config=kubeadm-config.yaml #--pod-network-cidr=10.244.0.0/16 
 export KUBECONFIG=/etc/kubernetes/admin.conf
 
