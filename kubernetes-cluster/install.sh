@@ -9,7 +9,7 @@ then
 	exit 2
 fi
 
-echo "[prepare] Creating the config file for kubeadm"
+echo "[prepare] Creating the config file for kubeadm with clustername $1"
 cat > kubeadm-config.yaml <<EOF
 apiVersion: kubeadm.k8s.io/v1beta1
 kind: ClusterConfiguration
