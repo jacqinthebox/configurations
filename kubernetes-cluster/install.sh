@@ -50,9 +50,6 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
 echo "[postdeployment] Installing Flannel"
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
 touch /tmp/installed
-else
-        echo "It looks like you installed already installed Kubernetes"
-fi
 
 echo "[postdeployment] Arranging access to the cluster for $(logname)\n"
 mkdir -p /home/$(logname)/.kube
@@ -96,6 +93,10 @@ kubectl -n kube-system get service/kubernetes-dashboard -o yaml | sed "s/type: C
 
 echo "[postdeployment] Creating shared folders to mount into the pods"
 mkdir -p /var/peterconnects/db
+
+else
+        echo "It looks like you installed already ran this script."
+fi
 
 echo "[end] If you want do reinitialize the cluster, run kubeadm reset --force AND delete the /tmp/installed file."
 echo "[end] Run kubectl get secret | grep cluster-admin-dashboard-sa and then kubectl describe secret <secretname> to get the token for the dashboard."
