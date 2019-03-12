@@ -98,22 +98,26 @@ else
         echo "It looks like you installed already ran this script."
 fi
 
-echo "[end] Done. Now fetch the token for the dashboard:"
+echo "[end] Done. Now fetching the token for the dashboard:"
+
+kubectl get secret $(kubectl get serviceaccount dashboard -o jsonpath="{.secrets[0].name}") -o jsonpath="{.data.token}" | base64 --decode
+
 echo ""
-echo "kubectl get secret | grep cluster-admin-dashboard-sa"
-echo "kubectl describe secret <secretname>"
+echo "Do this manually"
+echo "  kubectl get secret | grep cluster-admin-dashboard-sa"
+echo "  kubectl describe secret <secretname>"
 echo ""
 echo "Find out the tcp port of the dashboard:"
 echo ""
-echo "kubectl -n kube-system get service kubernetes-dashboard"
+echo "  kubectl -n kube-system get service kubernetes-dashboard"
 echo ""
 echo "[end] If you want to reinitialize the cluster, run" 
 echo ""
-echo "sudo rm /tmp/installed && sudo kubeadm reset --force"
+echo "  sudo rm /tmp/installed && sudo kubeadm reset --force"
 echo ""
 echo "[end] To install autocomplete for kubectl, copy and paste the following in your shell:"
 echo ""
-echo "source <(kubectl completion bash)" 
-echo "echo "\""source <(kubectl completion bash)"\"" >> ~/.bashrc"
+echo "  source <(kubectl completion bash)" 
+echo "  echo "\""source <(kubectl completion bash)"\"" >> ~/.bashrc"
 echo ""
 echo "[end] Thank you and see you later."
