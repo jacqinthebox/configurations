@@ -100,7 +100,7 @@ fi
 
 echo "[end] Done. Now fetching the token for the dashboard:"
 
-kubectl get secret $(kubectl get serviceaccount dashboard -o jsonpath="{.secrets[0].name}") -o jsonpath="{.data.token}" | base64 --decode
+kubectl get secret $(kubectl get serviceaccount cluster-admin-dashboard-sa -o jsonpath="{.secrets[0].name}") -o jsonpath="{.data.token}" | base64 --decode
 
 echo ""
 echo "Do this manually"
