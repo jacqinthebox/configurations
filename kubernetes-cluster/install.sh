@@ -81,7 +81,7 @@ done
 
 echo "[postdeployment] Install Ingress"
 
-helm install stable/nginx-ingress --name attendant-r1 --namespace kube-system --set controller.hostNetwork=true --set rbac.create=true --set controller.kind=Deployment --set controller.extraArgs.v=2 --set controller.extraArgs.tcp-services-configmap=default/sql-services
+helm install stable/nginx-ingress --name v1 --namespace kube-system --set controller.hostNetwork=true --set rbac.create=true --set controller.kind=Deployment --set controller.extraArgs.v=2 --set controller.extraArgs.tcp-services-configmap=default/sql-services
 
 echo "[postdeployment] Exposing port 1433"
 kubectl -n kube-system delete deployment v1-nginx-ingress-controller  
