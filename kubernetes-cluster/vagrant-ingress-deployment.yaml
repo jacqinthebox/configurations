@@ -31,14 +31,14 @@ spec:
     metadata:
       creationTimestamp: null
       labels:
-        app: nginx-ingress
+        app: vagrant-nginx-ingress
         component: controller
         release: vagrant
     spec:
       containers:
       - args:
         - /nginx-ingress-controller
-        - --default-backend-service=kube-system/v1-nginx-ingress-default-backend
+        - --default-backend-service=kube-system/vagrant-nginx-ingress-default-backend
         - --election-id=ingress-controller-leader
         - --ingress-class=nginx
         - --configmap=kube-system/vagrant-nginx-ingress-controller
