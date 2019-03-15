@@ -13,7 +13,6 @@ metadata:
     heritage: Tiller
     release: vagrant
   name: vagrant-nginx-ingress-controller
-  selfLink: /apis/extensions/v1beta1/namespaces/kube-system/deployments/v1-nginx-ingress-controller
 spec:
   progressDeadlineSeconds: 2147483647
   replicas: 1
