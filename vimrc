@@ -37,8 +37,9 @@ nnoremap <S-h> gT
 nnoremap <S-l> gt
 
 "may change from system to system
+set t_Co=256
 set background=dark
-colorscheme dracula
+colorscheme solarized
 set fillchars=""
 
 
