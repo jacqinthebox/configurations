@@ -10,8 +10,8 @@ execute pathogen#infect()
 filetype plugin indent on
 syntax on
 let NERDTreeShowHidden=1
-autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
-autocmd vimenter * if !argc() | NERDTree | endif
+"autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
+"autocmd vimenter * if !argc() | NERDTree | endif
 map <F7> mzgg=G`z<CR>
 map <F5> :NERDTreeToggle<CR>
 set paste
@@ -36,10 +36,20 @@ inoremap <C-t> <Esc>:tabnew<Space>
 nnoremap <S-h> gT
 nnoremap <S-l> gt
 
+"for the backspace key to work
+set backspace=indent,eol,start
+
+
+let g:airline_theme='minimalist'
+let g:airline_powerline_fonts = 1
 "may change from system to system
 set t_Co=256
 set background=dark
-colorscheme solarized
-set fillchars=""
+colorscheme nord
+let g:indent_guides_enable_on_vim_startup = 1
+set ts=2 sw=2 et
 
-
+"to split the screen with a terminal
+set splitbelow
+set termwinsize=15x0
+set rtp+=~/tabnine-vim
