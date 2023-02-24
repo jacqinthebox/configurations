@@ -1,0 +1,49 @@
+export ZSH=$HOME/.oh-my-zsh
+
+ZSH_THEME="powerlevel10k/powerlevel10k"
+fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
+source $ZSH/oh-my-zsh.sh
+. $HOME/.config/z.sh
+plugins=(git last-working-dir zsh-completions)
+
+if [ /usr/bin/kubectl ]; then source <(kubectl completion zsh); fi
+alias h="history | grep"
+#alias commitmsg="cp ~/commit-msg .git/hooks && chmod u=rwx .git/hooks/commit-msg"
+alias vi=vim
+alias v=vim
+export KUBE_EDITOR="vim"
+alias k=kubectl
+alias c="xclip -selection clipboard"
+alias kx=kubectx
+alias kn=kubens
+alias ke="kubectl get events --sort-by=.metadata.creationTimestamp"
+alias nodes="kubectl get pod -o=custom-columns=NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName --sort-by=.spec.nodeName"
+
+get_secret() {
+  kubectl get secret ${1} -o json | jq -r .data."${2}" | base64 -d
+}
+
+set_secret() {
+  kubectl create secret generic ${1} --from-literal=secret="${2}" --dry-run=client -o json | kubectl apply -f  -
+}
+
+source <(helm completion zsh)
+
+# paths for go
+export GOROOT=$HOME/go
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOROOT/bin:$GOPATH/bin:/usr/local/go/bin
+
+#history no lines
+alias hnl="history | cut -c 6-"
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+kube_backup() {
+  for n in $(kubectl get -o=name configmap,ingress,service,deployment,statefulset,pvc,secret)
+  do
+    echo "backing up $n"
+    mkdir -p $(dirname $n)
+    kubectl get -o yaml $n > $n.yaml
+  done
+}
+
