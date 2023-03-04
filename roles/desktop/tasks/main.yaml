@@ -54,6 +54,7 @@
         - io.podman_desktop.PodmanDesktop
         - com.slack.Slack
         - com.spotify.Client
+        - com.jgraph.drawio.desktop
 
     - name: Check if Marp CLI tar archive exists
       stat:
