@@ -1,0 +1,31 @@
+
+    # Golang
+    - name: Check if golang exists
+      ansible.builtin.stat:
+        path: "/home/{{ user_name }}/Downloads/tools/go{{ golang_version }}.linux-amd64.tar.gz"
+      register: golang
+    - name: Print a debug message for Istio
+      ansible.builtin.debug:
+        msg: "Golang download for {{ golang_version }} does already exist. Skipping the rest, yay."
+      when: golang.stat.exists == true
+    - name: Download golang '{{ golang_version }}'
+      become_user: "{{ user_name }}"
+      when: golang.stat.exists == false
+      ansible.builtin.get_url:
+        url: "https://go.dev/dl/go{{ golang_version }}.linux-amd64.tar.gz"
+        dest: "/home/{{ user_name }}/Downloads/tools/go{{ golang_version }}.linux-amd64.tar.gz"
+    - name: Extract golang
+      when: golang.stat.exists == false
+      ansible.builtin.unarchive:
+        src: "/home/{{ user_name }}/Downloads/tools/go{{ golang_version }}.linux-amd64.tar.gz"
+        dest: "/usr/local"
+    - name: Extract golang in home folder
+      become_user: "{{ user_name }}"
+      # when: golang.stat.exists == false
+      ansible.builtin.unarchive:
+        src: "/home/{{ user_name }}/Downloads/tools/go{{ golang_version }}.linux-amd64.tar.gz"
+        dest: "/home/{{ user_name }}"
+
+# export GOROOT=$HOME/go-1.19.5
+# export GOPATH=$HOME/go
+# export PATH=$PATH:$GOROOT/bin:$GOPATH/bin

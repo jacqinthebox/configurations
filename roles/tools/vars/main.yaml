@@ -1,0 +1,4 @@
+istio_version: 1.17.0
+kubectl_version: v1.25.0
+azuredatastudio_version: 1.41.2
+azuredatastudio_download_url: https://go.microsoft.com/fwlink/?linkid=2222875

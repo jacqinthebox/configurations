@@ -1,0 +1,5 @@
+- name: Install minimal
+  hosts: localhost
+  become: yes
+  roles:
+    - generic

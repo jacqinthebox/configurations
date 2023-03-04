@@ -1,0 +1,301 @@
+    - name: Create downloads/tools dir
+      become_user: "{{ user_name }}"
+      file:
+        path: "/home/{{ user_name }}/Downloads/tools"
+        state: directory
+
+    - name: Check if az exists
+      ansible.builtin.stat:
+        path: "/usr/bin/az"
+      register: az_cli
+
+    - name: Download Azure CLI install script
+      become_user: "{{ user_name }}"
+      when: az_cli.stat.exists is not defined
+      ansible.builtin.get_url:
+        url: https://azurecliprod.blob.core.windows.net/$root/deb_install.sh
+        dest: "/home/{{ user_name }}/Downloads/tools/deb_install.sh"
+        mode: '775'
+
+    - name: Run Azure CLI install script
+      when: az_cli.stat.exists is not defined
+      ansible.builtin.script:
+        cmd: "/home/{{ user_name }}/Downloads/tools/deb_install.sh"
+
+    - name: Check if .oh-my-zsh exists
+      ansible.builtin.stat:
+        path: "/home/{{ user_name }}/.oh-my-zsh/custom/az.zsh"
+      register: az_cli_sym
+
+    - name: Print a debug message
+      ansible.builtin.debug:
+        msg: "islnk isn't defined (az.zsh symlink does not exist)"
+      when: az_cli_sym.stat.islnk is not defined
+
+    - name: Print a debug message
+      ansible.builtin.debug:
+        msg: "islnk is defined (az.zsh symlink does exist)"
+      when: az_cli_sym.stat.islnk is defined
+
+    - name: Creating a symlink
+      become_user: "{{ user_name }}"
+      when: az_cli_sym.stat.islnk is not defined
+      ansible.builtin.file:
+        src: /etc/bash_completion.d/azure-cli
+        dest: "/home/{{ user_name }}/.oh-my-zsh/custom/az.zsh"
+        state: link
+
+
+    - name: Check download of kubectl version
+      ansible.builtin.stat:
+        path: "/home/{{ user_name }}/Downloads/tools/kubectl_{{ kubectl_version }}"
+      register: kubectl
+    - name: Print a debug message for kubectl
+      ansible.builtin.debug:
+        msg: "kubectl download for {{ kubectl_version }} does already exist. Skipping the rest, yay."
+      when: kubectl.stat.exists == true
+
+    - name: Download kubectl
+      when: kubectl.stat.exists == false
+      ansible.builtin.get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+        dest: "/home/{{ user_name }}/Downloads/tools/kubectl_{{ kubectl_version }}"
+        mode: '775'
+
+    - name: Download kubectl
+      when: kubectl.stat.exists == false
+      ansible.builtin.get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+        dest: "/home/{{ user_name }}/Downloads/tools/kubectl"
+        mode: '775'
+    - name: Copy kubectl to path
+      when: kubectl.stat.exists == false
+      ansible.builtin.shell:
+        cmd: "mv /home/{{ user_name }}/Downloads/tools/kubectl /usr/local/bin/kubectl"
+
+      #sudo mkdir -m 0755 -p /etc/apt/keyrings
+      #curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+      # echo \
+      #  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      #  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    # https://stackoverflow.com/questions/60137344/docker-how-to-solve-the-public-key-error-in-ubuntu-while-installing-docker
+
+    - name: Get GPG key for Docker and save as asc
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+
+    - name: add docker repo to apt
+      ansible.builtin.apt_repository:
+        filename: docker.list
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
+
+    - name: Update apt cache in a separate step
+      apt:
+        state: present
+        update_cache: yes
+        cache_valid_time: 86400
+
+    - name: Install docker and podman
+      apt:
+        name: "{{item}}"
+        state: latest
+      loop:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-compose-plugin
+        - docker-buildx-plugin
+        - podman
+
+    - name: Check docker is active
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Ensure group "docker" exists
+      ansible.builtin.group:
+        name: docker
+        state: present
+
+    - name: Adding "{{ user_name }}" to docker group
+      user:
+        name: "{{ user_name }}"
+        groups: docker
+        append: yes
+
+    # Minikube
+    - name: Check if minikube exists
+      ansible.builtin.stat:
+        path: /usr/local/bin/minikube
+      register: minikube
+
+
+    - name: Download minikube
+      when: minikube.stat.exists is not defined
+      ansible.builtin.get_url:
+        url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        dest: "/home/{{ user_name }}/Downloads/tools/minikube"
+        mode: '775'
+    - name: Copy kubectl to path
+      when: minikube.stat.exists is not defined
+      ansible.builtin.shell:
+        cmd: "mv /home/{{ user_name }}/Downloads/tools/minikube /usr/local/bin/minikube"
+
+    # Compose
+    - name: Install docker-compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/v2.16.0/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: 'u+x,g+x'
+    - name: Change file ownership, group and permissions
+      ansible.builtin.file:
+        path: /usr/local/bin/docker-compose
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+
+    # Terraform
+    #wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    #echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+    #sudo apt update && sudo apt install terraform
+    - name: Get GPG key for Terraform save as asc
+      ansible.builtin.get_url:
+        url: https://apt.releases.hashicorp.com/gpg
+        dest: /etc/apt/keyrings/hashicorp-archive-keyring.asc
+        mode: '0644'
+
+    - name: Add Hashicorp repo to apt
+      ansible.builtin.apt_repository:
+        filename: hashicorp.list
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/hashicorp-archive-keyring.asc] https://apt.releases.hashicorp.com/ jammy main"
+
+    - name: Update apt cache in a separate step
+      apt:
+        state: present
+        update_cache: yes
+        cache_valid_time: 86400
+
+    - name: Install Terraform
+      apt:
+        name: terraform
+        state: latest
+
+
+    # Helm
+
+    #curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+    #sudo apt-get install apt-transport-https --yes
+    #echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+    #sudo apt-get update
+    #sudo apt-get install helm
+
+    - name: Get GPG key for Helm save as asc
+      ansible.builtin.get_url:
+        url: https://baltocdn.com/helm/signing.asc
+        dest: /etc/apt/keyrings/helm.asc
+        mode: '0644'
+
+    - name: Add Helm repo to apt
+      ansible.builtin.apt_repository:
+        filename: helm-stable-debian.list
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/helm.asc] https://baltocdn.com/helm/stable/debian/ all main"
+
+    - name: Update apt cache in a separate step
+      apt:
+        state: present
+        update_cache: yes
+        cache_valid_time: 86400
+
+    - name: Install Helm
+      apt:
+        name: helm
+        state: latest
+
+    - name: Install kubectx
+      git:
+        repo: https://github.com/ahmetb/kubectx
+        dest: /opt/kubectx
+        clone: true
+        update: true
+
+    - name: Creating symlink for kubectx
+      ansible.builtin.file:
+        src: /opt/kubectx/kubectx
+        dest: /usr/local/bin/kubectx
+        state: link
+
+    - name: Creating symlink for kubens
+      ansible.builtin.file:
+        src: /opt/kubectx/kubens
+        dest: /usr/local/bin/kubens
+        state: link
+
+    - name: Creating a a folder for autocomplete
+      become_user: "{{ user_name }}"
+      file:
+        path: "/home/{{ user_name }}/.oh-my-zsh/completions"
+        state: directory
+        mode: '0755'
+
+
+    - name: Creating a symlink for kubectx autocomplete
+      become_user: "{{ user_name }}"
+      ansible.builtin.file:
+        src: /opt/kubectx/completion/_kubectx.zsh
+        dest: "/home/{{ user_name }}/.oh-my-zsh/completions/_kubectx.zsh"
+        state: link
+
+    - name: Creating a symlink for kubens autocomplete
+      become_user: "{{ user_name }}"
+      ansible.builtin.file:
+        src: /opt/kubectx/completion/_kubens.zsh
+        dest: "/home/{{ user_name }}/.oh-my-zsh/completions/_kubens.zsh"
+        state: link
+
+
+    # istio
+    - name: Check if Istio exists
+      ansible.builtin.stat:
+        path: "/home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}-linux-amd64.tar.gz"
+      register: istioctl
+    - name: Print a debug message for Istio
+      ansible.builtin.debug:
+        msg: "Istioctl download for {{ istio_version }} does already exist. Skipping the rest, yay."
+      when: istioctl.stat.exists == true
+    - name: Download istio '{{ istio_version }}'
+      when: istioctl.stat.exists == false
+      become_user: "{{ user_name }}"
+      ansible.builtin.get_url:
+        url: "https://github.com/istio/istio/releases/download/1.17.0/istio-{{ istio_version }}-linux-amd64.tar.gz"
+        dest: "/home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}-linux-amd64.tar.gz"
+    - name: Extract istio
+      when: istioctl.stat.exists == false
+      become_user: "{{ user_name }}"
+      ansible.builtin.unarchive:
+        src: "/home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}-linux-amd64.tar.gz"
+        dest: "/home/{{ user_name }}/Downloads/tools"
+    - name: Copy istio to path
+      when: istioctl.stat.exists == false
+      ansible.builtin.shell:
+        cmd: "mv /home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}/bin/istioctl /usr/local/bin/istioctl"
+
+    - name: Check if Azure Data Studio exists
+      ansible.builtin.stat:
+        path: "/home/{{ user_name }}/Downloads/tools/azuredatastudio-linux-{{ azuredatastudio_version }}.deb"
+      register: azuredatastudio
+    - name: Print a debug message for Istio
+      ansible.builtin.debug:
+        msg: "Azure Data Studio download for {{ azuredatastudio_version }} does already exist. Skipping the rest, yay."
+      when: azuredatastudio.stat.exists == true
+    - name: Download Azure Datastudio
+      get_url:
+        url: "{{ azuredatastudio_download_url }}"
+        dest: "/home/{{ user_name }}/Downloads/tools/azuredatastudio-linux-{{ azuredatastudio_version }}.deb"
+      when: azuredatastudio.stat.exists == false
+    - name: Install Azure Data Studio
+      apt: deb="/home/{{ user_name }}/Downloads/tools/azuredatastudio-linux-{{ azuredatastudio_version }}.deb"
+      when: azuredatastudio.stat.exists == false
+
