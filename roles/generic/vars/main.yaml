@@ -1,0 +1,2 @@
+# set to true if you want to update all vim plugins
+update_vim_pathogen_plugins: false
