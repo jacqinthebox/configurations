@@ -5,6 +5,7 @@
 
 .DS_Store
 
+group_vars/all.yaml
 
 .gradle
 .idea/

@@ -55,6 +55,7 @@
         - com.slack.Slack
         - com.spotify.Client
         - com.jgraph.drawio.desktop
+        - com.discordapp.Discord
 
     - name: Check if Marp CLI tar archive exists
       stat:
