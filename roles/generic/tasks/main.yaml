@@ -105,7 +105,8 @@
         - "/home/{{ user_name }}/Downloads"
         - "/home/{{ user_name }}/Downloads/tools"
         - "/home/{{ user_name }}/Downloads/deb"
-
+        - "/home/{{ user_name }}/.config"
+        
     - name: download z.sh
       become_user: "{{ user_name }}"
       get_url:
