@@ -1,6 +1,0 @@
-- name: Install vm packages
-  hosts: localhost
-  become: yes
-  roles:
-    - generic
-    - tools

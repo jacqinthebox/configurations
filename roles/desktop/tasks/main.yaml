@@ -1,75 +1,127 @@
-    - name: update and upgrade apt packages
-      apt:
-        state: present
-        upgrade: yes
-        update_cache: yes
-        cache_valid_time: 86400
-      when: ansible_os_family == 'Debian'
-    - name: install misc packages
-      apt:
-        state: present
-        pkg:
-          - hugo
-          - gnome-tweaks
-          - vagrant
-          - flatpak
-          - gnome-tweaks
+  - name: update and upgrade apt packages
+    apt:
+      state: present
+      upgrade: yes
+      update_cache: yes
+      cache_valid_time: 86400
+    when: ansible_os_family == 'Debian'
 
+  - name: install misc packages
+    apt:
+      state: present
+      pkg:
+        - neofetch
+        - build-essential
+        - cmake
+        - vim-nox
+        - python3-dev
+        - mono-complete
+        - linux-headers-{{ ansible_kernel }}
+        - git
+        - curl
+        - wget
+        - jq
+        - xclip
+        - apt-transport-https
+        - zsh
+        - unzip
+        - htop
+        - python3-pip
+        - ca-certificates
+        - lsb-release
+        - tmux
+        - libarchive-tools
+        - ruby-dev
+        - plocate
+        - tree
+        - hugo
+        - gnome-tweaks
+        - vagrant
+        - flatpak
+        - gnome-tweaks
+        - ripgrep
+        - silver-server-ag
+        - tree
 
-    - name: Download vscode
-      get_url:
-        url: "{{ vscode_url }}"
-        dest: "/home/{{ user_name }}/Downloads/debs/vscode.deb"
+  - name: Create some directories
+    become_user: "{{ user_name }}"
+    file:
+      path: "{{ item }}"
+      state: directory
+      mode: 0755
+    loop:
+      - "/home/{{ user_name }}/Downloads"
+      - "/home/{{ user_name }}/Downloads/install"
+      - "/home/{{ user_name }}/Downloads/tools"
+      - "/home/{{ user_name }}/Downloads/debs"
+      - "/home/{{ user_name }}/.config"
 
-    - name: Install vscode
-      apt: deb="/home/{{ user_name }}/Downloads/debs/vscode.deb"
-        state=present
+  - name: Copy Meslo font
+    ansible.builtin.copy:
+      src: "MesloLGSNF.ttf"
+      dest: "/usr/local/share/fonts/MesloLGSNF.ttf"
 
-    - name: download chrome
-      get_url:
-        url: https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-        dest: "/home/{{ user_name }}/Downloads/debs/chrome.deb"
+  - name: Copy JetBrains font
+    ansible.builtin.copy:
+      src: "JetBrainsMonoNerdFontMono-Regular.ttf"
+      dest: "/usr/local/share/fonts/JetBrainsMonoNerdFontMono-Regular.ttf"
 
-    - name: install chrome
-      apt: deb="/home/{{ user_name }}/Downloads/debs/chrome.deb"
-        state=present
+  - name: Update font cache
+    ansible.builtin.shell:
+      cmd: "fc-cache -f -v"
 
-    - name: enable flatpak repo
-      ansible.builtin.shell:
-        cmd:  "flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo"
+  - name: Download vscode
+    get_url:
+      url: "{{ vscode_url }}"
+      dest: "/home/{{ user_name }}/Downloads/debs/vscode.deb"
 
-    - name: install multiple flatpak packages
-      community.general.flatpak:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - com.giuspen.cherrytree
-        - md.obsidian.Obsidian
-        - org.flameshot.Flameshot
-        - net.xmind.XMind8
-        - com.getpostman.Postman
-        - io.dbeaver.DBeaverCommunity
-        - com.todoist.Todoist
-        - com.bitwarden.desktop
-        - io.podman_desktop.PodmanDesktop
-        - com.slack.Slack
-        - com.spotify.Client
-        - com.jgraph.drawio.desktop
-        - com.discordapp.Discord
+  - name: Install vscode
+    apt: deb="/home/{{ user_name }}/Downloads/debs/vscode.deb"
+      state=present
 
-    - name: Check if Marp CLI tar archive exists
-      stat:
-        path: "/home/{{ user_name }}/Downloads/tools/marp-cli.tar.gz"
-      register: marp
+  - name: download chrome
+    get_url:
+      url: https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+      dest: "/home/{{ user_name }}/Downloads/debs/chrome.deb"
 
-    - name: Download Marp CLI
-      become: "{{ user_name }}"
-      get_url:
-        url: "https://github.com/marp-team/marp-cli/releases/download/v2.4.0/marp-cli-v2.4.0-linux.tar.gz"
-        dest: "/home/{{ user_name }}/Downloads/tools/marp-cli.tar.gz"
-      when: marp.stat.exists == false
-    - name: Install Marp CLI
-      shell:
-        cmd: "tar -zxvf /home/{{ user_name }}/Downloads/tools/marp-cli.tar.gz -C /usr/local/bin/"
-      args:
-        creates: /usr/local/bin/marp
+  - name: install chrome
+    apt: deb="/home/{{ user_name }}/Downloads/debs/chrome.deb"
+      state=present
+
+  - name: enable flatpak repo
+    ansible.builtin.shell:
+      cmd:  "flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo"
+
+  - name: install multiple flatpak packages
+    community.general.flatpak:
+      name: "{{ item }}"
+      state: present
+    loop:
+      - com.giuspen.cherrytree
+      - md.obsidian.Obsidian
+      - org.flameshot.Flameshot
+      - com.getpostman.Postman
+      - io.dbeaver.DBeaverCommunity
+      - com.bitwarden.desktop
+      - io.podman_desktop.PodmanDesktop
+      - com.slack.Slack
+      - com.jgraph.drawio.desktop
+      - com.notesnook.Notesnook
+      - org.cryptomator.Cryptomator
+
+  - name: Check if Marp CLI tar archive exists
+    stat:
+      path: "/home/{{ user_name }}/Downloads/tools/marp-cli.tar.gz"
+    register: marp
+
+  - name: Download Marp CLI
+    become_user: "{{ user_name }}"
+    get_url:
+      url: "https://github.com/marp-team/marp-cli/releases/download/v2.4.0/marp-cli-v2.4.0-linux.tar.gz"
+      dest: "/home/{{ user_name }}/Downloads/tools/marp-cli.tar.gz"
+    when: marp.stat.exists == false
+  - name: Install Marp CLI
+    shell:
+      cmd: "tar -zxvf /home/{{ user_name }}/Downloads/tools/marp-cli.tar.gz -C /usr/local/bin/"
+    args:
+      creates: /usr/local/bin/marp
