@@ -2,7 +2,6 @@
   hosts: localhost
   become: yes
   roles:
-    - generic
     - desktop
     - tools
     - languages
