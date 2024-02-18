@@ -34,6 +34,14 @@
         - ruby-dev
         - plocate
         - tree
+        - hugo
+        - gnome-tweaks
+        - vagrant
+        - flatpak
+        - gnome-tweaks
+        - ripgrep
+        - silver-server-ag
+        - tree
 
   - name: Create some directories
     become_user: "{{ user_name }}"
@@ -43,27 +51,24 @@
       mode: 0755
     loop:
       - "/home/{{ user_name }}/Downloads"
+      - "/home/{{ user_name }}/Downloads/install"
       - "/home/{{ user_name }}/Downloads/tools"
-      - "/home/{{ user_name }}/Downloads/deb"
+      - "/home/{{ user_name }}/Downloads/debs"
       - "/home/{{ user_name }}/.config"
 
-  - name: update and upgrade apt packages
-    apt:
-      state: present
-      upgrade: yes
-      update_cache: yes
-      cache_valid_time: 86400
-    when: ansible_os_family == 'Debian'
-  - name: install misc packages
-    apt:
-      state: present
-      pkg:
-        - hugo
-        - gnome-tweaks
-        - vagrant
-        - flatpak
-        - gnome-tweaks
+  - name: Copy Meslo font
+    ansible.builtin.copy:
+      src: "MesloLGSNF.ttf"
+      dest: "/usr/local/share/fonts/MesloLGSNF.ttf"
 
+  - name: Copy JetBrains font
+    ansible.builtin.copy:
+      src: "JetBrainsMonoNerdFontMono-Regular.ttf"
+      dest: "/usr/local/share/fonts/JetBrainsMonoNerdFontMono-Regular.ttf"
+
+  - name: Update font cache
+    ansible.builtin.shell:
+      cmd: "fc-cache -f -v"
 
   - name: Download vscode
     get_url:
@@ -102,6 +107,7 @@
       - com.slack.Slack
       - com.jgraph.drawio.desktop
       - com.notesnook.Notesnook
+      - org.cryptomator.Cryptomator
 
   - name: Check if Marp CLI tar archive exists
     stat:
@@ -109,7 +115,7 @@
     register: marp
 
   - name: Download Marp CLI
-    become: "{{ user_name }}"
+    become_user: "{{ user_name }}"
     get_url:
       url: "https://github.com/marp-team/marp-cli/releases/download/v2.4.0/marp-cli-v2.4.0-linux.tar.gz"
       dest: "/home/{{ user_name }}/Downloads/tools/marp-cli.tar.gz"

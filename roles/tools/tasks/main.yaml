@@ -11,31 +11,16 @@
 
     - name: Download Azure CLI install script
       become_user: "{{ user_name }}"
-      when: az_cli.stat.exists is not defined
+      when: not az_cli.stat.exists
       ansible.builtin.get_url:
         url: https://azurecliprod.blob.core.windows.net/$root/deb_install.sh
         dest: "/home/{{ user_name }}/Downloads/tools/deb_install.sh"
         mode: '775'
 
     - name: Run Azure CLI install script
-      when: az_cli.stat.exists is not defined
+      when: not az_cli.stat.exists
       ansible.builtin.script:
         cmd: "/home/{{ user_name }}/Downloads/tools/deb_install.sh"
-
-    - name: Check if .oh-my-zsh exists
-      ansible.builtin.stat:
-        path: "/home/{{ user_name }}/.oh-my-zsh/custom/az.zsh"
-      register: az_cli_sym
-
-    - name: Print a debug message
-      ansible.builtin.debug:
-        msg: "islnk isn't defined (az.zsh symlink does not exist)"
-      when: az_cli_sym.stat.islnk is not defined
-
-    - name: Print a debug message
-      ansible.builtin.debug:
-        msg: "islnk is defined (az.zsh symlink does exist)"
-      when: az_cli_sym.stat.islnk is defined
 
     - name: Creating a symlink
       become_user: "{{ user_name }}"
@@ -45,6 +30,13 @@
         dest: "/home/{{ user_name }}/.oh-my-zsh/custom/az.zsh"
         state: link
 
+    - name: Add zsh completions
+      become_user: "{{ user_name }}"
+      git:
+        repo: "https://github.com/zsh-users/zsh-completions"
+        dest: "/home/{{ user_name }}/.oh-my-zsh/custom/plugins/zsh-completions"
+        clone: true
+        update: true
 
     - name: Check download of kubectl version
       ansible.builtin.stat:
@@ -135,7 +127,7 @@
 
 
     - name: Download minikube
-      when: minikube.stat.exists is not defined
+      when: not minikube.stat.exists
       ansible.builtin.get_url:
         url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
         dest: "/home/{{ user_name }}/Downloads/tools/minikube"
@@ -257,30 +249,30 @@
 
 
     # istio
-    - name: Check if Istio exists
-      ansible.builtin.stat:
-        path: "/home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}-linux-amd64.tar.gz"
-      register: istioctl
-    - name: Print a debug message for Istio
-      ansible.builtin.debug:
-        msg: "Istioctl download for {{ istio_version }} does already exist. Skipping the rest, yay."
-      when: istioctl.stat.exists == true
-    - name: Download istio '{{ istio_version }}'
-      when: istioctl.stat.exists == false
-      become_user: "{{ user_name }}"
-      ansible.builtin.get_url:
-        url: "https://github.com/istio/istio/releases/download/1.17.0/istio-{{ istio_version }}-linux-amd64.tar.gz"
-        dest: "/home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}-linux-amd64.tar.gz"
-    - name: Extract istio
-      when: istioctl.stat.exists == false
-      become_user: "{{ user_name }}"
-      ansible.builtin.unarchive:
-        src: "/home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}-linux-amd64.tar.gz"
-        dest: "/home/{{ user_name }}/Downloads/tools"
-    - name: Copy istio to path
-      when: istioctl.stat.exists == false
-      ansible.builtin.shell:
-        cmd: "mv /home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}/bin/istioctl /usr/local/bin/istioctl"
+#    - name: Check if Istio exists
+#      ansible.builtin.stat:
+#        path: "/home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}-linux-amd64.tar.gz"
+#      register: istioctl
+#    - name: Print a debug message for Istio
+#      ansible.builtin.debug:
+#        msg: "Istioctl download for {{ istio_version }} does already exist. Skipping the rest, yay."
+#      when: istioctl.stat.exists == true
+#    - name: Download istio '{{ istio_version }}'
+#      when: istioctl.stat.exists == false
+#      become_user: "{{ user_name }}"
+#      ansible.builtin.get_url:
+#        url: "https://github.com/istio/istio/releases/download/1.17.0/istio-{{ istio_version }}-linux-amd64.tar.gz"
+#        dest: "/home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}-linux-amd64.tar.gz"
+#    - name: Extract istio
+#      when: istioctl.stat.exists == false
+#      become_user: "{{ user_name }}"
+#      ansible.builtin.unarchive:
+#        src: "/home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}-linux-amd64.tar.gz"
+#        dest: "/home/{{ user_name }}/Downloads/tools"
+#    - name: Copy istio to path
+#      when: istioctl.stat.exists == false
+#      ansible.builtin.shell:
+#        cmd: "mv /home/{{ user_name }}/Downloads/tools/istio-{{ istio_version }}/bin/istioctl /usr/local/bin/istioctl"
 
     - name: Check if Azure Data Studio exists
       ansible.builtin.stat:
