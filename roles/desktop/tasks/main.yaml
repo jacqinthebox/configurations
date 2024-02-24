@@ -40,7 +40,7 @@
         - flatpak
         - gnome-tweaks
         - ripgrep
-        - silver-server-ag
+        - silversearcher-ag
         - tree
 
   - name: Create some directories
