@@ -13,7 +13,6 @@
         - neofetch
         - build-essential
         - cmake
-        - vim-nox
         - python3-dev
         - mono-complete
         - linux-headers-{{ ansible_kernel }}
